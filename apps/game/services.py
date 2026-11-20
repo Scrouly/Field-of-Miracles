@@ -181,7 +181,10 @@ def _apply_action_with_effects(
     # Apply sector effect if SPIN_RESULT has an associated Effect in DB
     if action.type == "SPIN_RESULT" and action.sector_index >= 0:
         round_obj = (
-            session.event.rounds.select_related("wheel")
+            session.event.rounds.filter(question__word=state.word)
+            .select_related("wheel")
+            .first()
+            or session.event.rounds.select_related("wheel")
             .order_by("order")
             .first()
         )
@@ -324,8 +327,24 @@ def undo_last_action(session: GameSession) -> dict[str, Any]:
     # Replay all remaining logs from the event's initial state
     current_state = get_initial_state_for_event(session.event)
     for log in logs:
-        action = action_from_dict(log.data)
-        current_state = _apply_action_with_effects(current_state, action, session)
+        if log.action == "LOAD_ROUND":
+            r_id = log.data.get("round_id")
+            if r_id:
+                current_state = _get_round_initial_state(session.event, int(r_id))
+        elif log.action == "RESET_ROUND":
+            current_state = new_game(
+                word=current_state.word,
+                players=list(current_state.players),
+                scoring=current_state.scoring,
+                word_bonus=current_state.word_bonus,
+                sector_value=100,
+                question=current_state.question,
+                hint=current_state.hint,
+                is_supergame=current_state.is_supergame,
+            )
+        else:
+            action = action_from_dict(log.data)
+            current_state = _apply_action_with_effects(current_state, action, session)
 
     # Next version for client invalidation
     new_version = session.version + 1
@@ -364,10 +383,10 @@ def get_session_logs(
     ]
 
 
-def load_round_for_session(session: GameSession, round_id: int) -> dict[str, Any]:
-    """Switch the session to a specific round from the event."""
+def _get_round_initial_state(event: Event, round_id: int) -> GameState:
+    """Construct initial state for a specific round."""
     try:
-        round_obj = Round.objects.select_related("question", "wheel").get(pk=round_id, event=session.event)
+        round_obj = Round.objects.select_related("question", "wheel").get(pk=round_id, event=event)
     except Round.DoesNotExist as exc:
         raise InvalidAction(f"Раунд #{round_id} не найден в данном мероприятии") from exc
 
@@ -378,7 +397,7 @@ def load_round_for_session(session: GameSession, round_id: int) -> dict[str, Any
 
     players = round_obj.params.get("players") if round_obj.params else None
     if not players:
-        all_players = list(session.event.players.order_by("order").values_list("name", flat=True))
+        all_players = list(event.players.order_by("order").values_list("name", flat=True))
         offset = (round_obj.order - 1) * 3
         if len(all_players) >= offset + 3:
             players = all_players[offset : offset + 3]
@@ -387,7 +406,7 @@ def load_round_for_session(session: GameSession, round_id: int) -> dict[str, Any
         else:
             players = all_players or ["Игрок 1", "Игрок 2", "Игрок 3"]
 
-    rules = session.event.rules or {}
+    rules = event.rules or {}
     scoring = rules.get("scoring", "per_occurrence")
     word_bonus = rules.get("word_bonus", 500)
     is_super = (round_obj.type == Round.Type.SUPERGAME)
@@ -403,6 +422,13 @@ def load_round_for_session(session: GameSession, round_id: int) -> dict[str, Any
     )
     if is_super:
         init_state = replace(init_state, is_supergame=True)
+    return init_state
+
+
+def load_round_for_session(session: GameSession, round_id: int) -> dict[str, Any]:
+    """Switch the session to a specific round from the event."""
+    init_state = _get_round_initial_state(session.event, round_id)
+    round_obj = Round.objects.get(pk=round_id, event=session.event)
 
     state_dict = state_to_dict(init_state)
     session.state = state_dict
@@ -413,8 +439,9 @@ def load_round_for_session(session: GameSession, round_id: int) -> dict[str, Any
         session=session,
         number=session.logs.count() + 1,
         action="LOAD_ROUND",
-        data={"round_id": round_id, "round_order": round_obj.order, "word": word},
+        data={"round_id": round_id, "round_order": round_obj.order, "word": init_state.word},
     )
+    return state_dict
     return state_dict
 
 

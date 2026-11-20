@@ -16,6 +16,7 @@
       this.activeModal = null;
       this.isSelectingCell = false;
       this.lastHandledSound = null;
+      this.lastHandledModalKey = null;
 
       this.createDOM();
     }
@@ -37,15 +38,7 @@
     update(state) {
       if (!state) return;
 
-      // 1. Play pending sound
-      if (state.pending_sound && state.pending_sound !== this.lastHandledSound) {
-        this.lastHandledSound = state.pending_sound;
-        if (this.display.audioManager && typeof this.display.audioManager.play === 'function') {
-          this.display.audioManager.play(state.pending_sound);
-        }
-      }
-
-      // 2. Sector '+' (reveal any closed cell)
+      // 1. Sector '+' (reveal any closed cell)
       const isSectorPlus = (state.special_event === 'reveal_any_letter' || state.pending_modal === 'reveal_cell');
       if (isSectorPlus) {
         this.enableCellSelection(state);
@@ -55,16 +48,32 @@
 
       // 3. Two Boxes minigame
       if (state.special_event === 'two_boxes' || state.pending_modal === 'two_boxes') {
-        this.showTwoBoxesModal();
+        const modalKey = `${state.version}:two_boxes`;
+        if (this.lastHandledModalKey !== modalKey) {
+          this.lastHandledModalKey = modalKey;
+          this.showTwoBoxesModal();
+        }
       } else if (state.pending_modal && state.pending_modal.startsWith('box_win:')) {
-        const pts = state.pending_modal.split(':')[1] || '500';
-        this.showBoxResult(true, pts);
+        const modalKey = `${state.version}:${state.pending_modal}`;
+        if (this.lastHandledModalKey !== modalKey) {
+          this.lastHandledModalKey = modalKey;
+          const pts = state.pending_modal.split(':')[1] || '500';
+          this.showBoxResult(true, pts);
+        }
       } else if (state.pending_modal === 'box_empty') {
-        this.showBoxResult(false, 0);
+        const modalKey = `${state.version}:box_empty`;
+        if (this.lastHandledModalKey !== modalKey) {
+          this.lastHandledModalKey = modalKey;
+          this.showBoxResult(false, 0);
+        }
       } else if (state.pending_modal && state.pending_modal.startsWith('prize:')) {
-        const prizeName = state.pending_modal.split(':')[1] || 'Приз';
-        this.showPrizeModal(prizeName);
-      } else if (!isSectorPlus && this.activeModal && !this.activeModal.startsWith('box_result')) {
+        const modalKey = `${state.version}:${state.pending_modal}`;
+        if (this.lastHandledModalKey !== modalKey) {
+          this.lastHandledModalKey = modalKey;
+          const prizeName = state.pending_modal.split(':')[1] || 'Приз';
+          this.showPrizeModal(prizeName);
+        }
+      } else if (!isSectorPlus && !state.pending_modal && this.activeModal) {
         this.closeModal();
       }
     }

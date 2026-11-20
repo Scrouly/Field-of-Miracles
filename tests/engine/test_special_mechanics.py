@@ -155,3 +155,13 @@ class TestTwoBoxesGame:
         box_state = run_effect(game_state, "start_box_game")
         with pytest.raises(InvalidAction):
             apply(box_state, choose_box(2))
+
+    def test_box_win_modal_is_cleared_on_subsequent_action(self, game_state: GameState):
+        """Уведомление о победе в шкатулке должно сбрасываться на следующем ходу."""
+        box_state = run_effect(game_state, "start_box_game")
+        winner_state = apply(box_state, choose_box(0))
+        assert "box_win:500" in winner_state.pending_modal
+
+        # Next letter guess must clear pending_modal
+        next_state = apply(winner_state, guess_letter("м"))
+        assert next_state.pending_modal == ""

@@ -143,3 +143,40 @@ class TestCrashRecoveryAndUndo:
         )
         assert res["status"] == "ok"
         assert res["changed"] is False
+
+    def test_undo_after_load_round_does_not_crash(self):
+        """Undo после переключения тура корректно откатывает действие в новом туре."""
+        q2 = Question.objects.create(word="КАРЬЕР", text="Вопрос 2")
+        r2 = Round.objects.create(
+            event=self.event,
+            order=2,
+            question=q2,
+            wheel=self.wheel,
+            params={"players": ["Игрок А", "Игрок Б", "Игрок В"]},
+        )
+        # Load round 2
+        v0 = self.session.version
+        services.apply_action(
+            {"type": "LOAD_ROUND", "round_id": r2.pk},
+            expected_version=v0,
+            session_id=self.session.pk,
+        )
+
+        # Guess letter 'К' in round 2
+        s = GameSession.objects.get(pk=self.session.pk)
+        r_guess = services.apply_action(
+            {"type": "GUESS_LETTER", "letter": "к"},
+            expected_version=s.version,
+            session_id=self.session.pk,
+        )
+        assert r_guess["word"] == "КАРЬЕР"
+        assert r_guess["mask"][0] is True
+
+        # Call Undo
+        r_undo = services.apply_action(
+            {"type": "UNDO"},
+            expected_version=r_guess["version"],
+            session_id=self.session.pk,
+        )
+        assert r_undo["word"] == "КАРЬЕР"
+        assert r_undo["mask"][0] is False

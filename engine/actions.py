@@ -222,9 +222,9 @@ def _guess_letter(state: GameState, action: Action) -> GameState:
         # Check for 3 correct letters in a row (when round is still ongoing)
         if is_won:
             new_phase = "round_won"
-            special_event = state.special_event
-            pending_modal = state.pending_modal
-            pending_sound = "letter_open"
+            special_event = ""
+            pending_modal = ""
+            pending_sound = "win"
             streak_to_store = new_streak
         elif new_streak >= 3:
             new_phase = "special_event"
@@ -234,8 +234,8 @@ def _guess_letter(state: GameState, action: Action) -> GameState:
             streak_to_store = 0  # streak consumed
         else:
             new_phase = "await_letter"
-            special_event = state.special_event
-            pending_modal = state.pending_modal
+            special_event = ""
+            pending_modal = ""
             pending_sound = "letter_open"
             streak_to_store = new_streak
 
@@ -258,6 +258,9 @@ def _guess_letter(state: GameState, action: Action) -> GameState:
         current_player=_next_player(state),
         guessed_letters=new_guessed,
         letter_streak=0,
+        special_event="",
+        pending_modal="",
+        pending_sound="miss",
         version=state.version + 1,
     )
 
@@ -275,6 +278,9 @@ def _guess_word(state: GameState, action: Action) -> GameState:
             phase="round_won",
             mask=full_mask,
             scores=new_scores,
+            special_event="",
+            pending_modal="",
+            pending_sound="win",
             version=state.version + 1,
         )
 
@@ -283,6 +289,9 @@ def _guess_word(state: GameState, action: Action) -> GameState:
         state,
         current_player=_next_player(state),
         letter_streak=0,
+        special_event="",
+        pending_modal="",
+        pending_sound="miss",
         version=state.version + 1,
     )
 
@@ -293,6 +302,9 @@ def _skip_turn(state: GameState, action: Action) -> GameState:
         state,
         current_player=_next_player(state),
         letter_streak=0,
+        special_event="",
+        pending_modal="",
+        pending_sound="miss",
         version=state.version + 1,
     )
 
@@ -316,6 +328,9 @@ def _start_spin(state: GameState, action: Action) -> GameState:
     return replace(
         state,
         phase="spinning",
+        special_event="",
+        pending_modal="",
+        pending_sound="",
         version=state.version + 1,
     )
 
@@ -332,6 +347,9 @@ def _spin_result(state: GameState, action: Action) -> GameState:
         phase="await_letter",
         sector_index=action.sector_index,
         sector_value=new_sector_value,
+        special_event="",
+        pending_modal="",
+        pending_sound="",
         version=state.version + 1,
     )
 

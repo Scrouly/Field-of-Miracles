@@ -27,6 +27,7 @@
       this.playersContainer = document.getElementById('players-container');
       this.statusMessageElem = document.getElementById('status-message');
       this.roundWonBanner = document.getElementById('round-won-banner');
+      this.lastPlayedSoundVersion = -1;
 
       if (window.AudioManager) {
         window.audioManager = new window.AudioManager();
@@ -228,8 +229,9 @@
         this.wheelOverlay.classList.remove('is-active');
       }
 
-      // Воспроизведение звуков по триггеру
-      if (state.pending_sound && window.audioManager && typeof window.audioManager.play === 'function') {
+      // Воспроизведение звуков по триггеру (только один раз при изменении версии)
+      if (state.pending_sound && this.lastPlayedSoundVersion !== state.version && window.audioManager && typeof window.audioManager.play === 'function') {
+        this.lastPlayedSoundVersion = state.version;
         window.audioManager.play(state.pending_sound);
       }
 

@@ -7,6 +7,7 @@ GameLog journaling, and pure engine transitions.
 from __future__ import annotations
 
 from dataclasses import replace
+import time
 from typing import Any
 
 from django.db import transaction
@@ -152,12 +153,14 @@ def get_state_data(
 
     state_dict = dict(session.state)
     state_dict["version"] = session.version
+    server_now = time.time()
     return {
         **state_dict,
         "status": "ok",
         "changed": True,
         "version": session.version,
         "session_id": session.pk,
+        "server_time": server_now,
         "state": state_dict,
     }
 

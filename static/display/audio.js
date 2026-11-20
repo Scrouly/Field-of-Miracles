@@ -204,9 +204,39 @@
           osc.start(now);
           osc.stop(now + 0.35);
           break;
+        case 'gong':
+          this.playGong();
+          break;
         default:
           break;
       }
+    }
+
+    /**
+     * Глубокий резонансный гонг (Web Audio API синтез).
+     */
+    playGong() {
+      if (!this.ctx || this.ctx.state !== 'running') return;
+      const now = this.ctx.currentTime;
+      const gongFreqs = [98, 147, 220, 311, 440]; // Металлические гармоники
+
+      gongFreqs.forEach((freq, idx) => {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, now);
+
+        const duration = 2.8;
+        const initialVol = (0.25 / (idx + 1)) * this.volume;
+        gain.gain.setValueAtTime(initialVol, now);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + duration);
+      });
     }
   }
 

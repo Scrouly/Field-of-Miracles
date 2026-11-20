@@ -50,6 +50,9 @@ class Action:
     sector_value: int = 0
     cell_index: int = -1
     box_index: int = -1
+    letters: tuple[str, ...] = ()
+    duration: int = 60
+    limit: int = 3
 
 
 # ---- Factory helpers ------------------------------------------------
@@ -95,9 +98,37 @@ def choose_box(box_index: int) -> Action:
     return Action(type="CHOOSE_BOX", box_index=box_index)
 
 
+def start_supergame(limit: int = 3, duration: int = 60) -> Action:
+    """Start supergame round."""
+    return Action(type="START_SUPERGAME", limit=limit, duration=duration)
+
+
+def supergame_letters(letters: list[str] | tuple[str, ...]) -> Action:
+    """Provide free letters in supergame."""
+    return Action(type="SUPERGAME_LETTERS", letters=tuple(letters))
+
+
+def supergame_time_up() -> Action:
+    """Trigger gong when supergame countdown finishes."""
+    return Action(type="SUPERGAME_TIME_UP")
+
+
+def supergame_guess(correct: bool) -> Action:
+    """Resolve supergame word guess."""
+    return Action(type="SUPERGAME_GUESS", correct=correct)
+
+
 def action_from_dict(data: dict) -> Action:
     """Parse an Action from a dictionary payload."""
     action_type = str(data.get("type", "")).upper()
+    raw_letters = data.get("letters") or ()
+    if isinstance(raw_letters, (list, tuple)):
+        parsed_letters = tuple(str(x) for x in raw_letters)
+    elif isinstance(raw_letters, str):
+        parsed_letters = tuple(raw_letters.split())
+    else:
+        parsed_letters = ()
+
     return Action(
         type=action_type,
         letter=str(data.get("letter", "")),
@@ -108,6 +139,9 @@ def action_from_dict(data: dict) -> Action:
         sector_value=int(data.get("sector_value", 0)),
         cell_index=int(data.get("cell_index", -1)),
         box_index=int(data.get("box_index", -1)),
+        letters=parsed_letters,
+        duration=int(data.get("duration", 60)),
+        limit=int(data.get("limit", 3)),
     )
 
 
@@ -376,6 +410,31 @@ def _choose_box(state: GameState, action: Action) -> GameState:
     )
 
 
+def _start_supergame(state: GameState, action: Action) -> GameState:
+    from engine import supergame
+    return supergame.start_supergame(
+        state,
+        free_letters_limit=action.limit,
+        timer_duration=action.duration,
+    )
+
+
+def _supergame_letters(state: GameState, action: Action) -> GameState:
+    from engine import supergame
+    letters = action.letters if action.letters else ((action.letter,) if action.letter else ())
+    return supergame.choose_free_letters(state, letters)
+
+
+def _supergame_time_up(state: GameState, _action: Action) -> GameState:
+    from engine import supergame
+    return supergame.time_up(state)
+
+
+def _supergame_guess(state: GameState, action: Action) -> GameState:
+    from engine import supergame
+    return supergame.resolve_supergame(state, correct=action.correct)
+
+
 # ---- Register handlers ---------------------------------------------
 
 _HANDLERS.update(
@@ -388,5 +447,9 @@ _HANDLERS.update(
         "SPIN_RESULT": _spin_result,
         "REVEAL_CELL": _reveal_cell,
         "CHOOSE_BOX": _choose_box,
+        "START_SUPERGAME": _start_supergame,
+        "SUPERGAME_LETTERS": _supergame_letters,
+        "SUPERGAME_TIME_UP": _supergame_time_up,
+        "SUPERGAME_GUESS": _supergame_guess,
     }
 )

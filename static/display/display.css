@@ -567,3 +567,96 @@ html, body {
   margin-top: 10px;
 }
 
+/* -------------------------------------------------------------------------- */
+/* Круговой таймер суперигры (Задача 14)                                      */
+/* -------------------------------------------------------------------------- */
+
+.supergame-timer-container {
+  position: fixed;
+  top: 100px;
+  right: 50px;
+  z-index: 85;
+  transition: opacity 0.3s ease;
+}
+
+.supergame-timer-container.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.timer-box {
+  position: relative;
+  width: 160px;
+  height: 160px;
+  background: rgba(11, 19, 43, 0.85);
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.timer-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform: rotate(-90deg);
+}
+
+.timer-track {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.1);
+  stroke-width: 10;
+}
+
+.timer-progress {
+  fill: none;
+  stroke: var(--color-gold, #f4c430);
+  stroke-width: 10;
+  stroke-linecap: round;
+  transition: stroke 0.3s ease;
+}
+
+.timer-text-wrap {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.timer-seconds {
+  font-size: 48px;
+  font-weight: 900;
+  color: #ffffff;
+  line-height: 1;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace;
+}
+
+.timer-unit {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.6);
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+.timer-warning .timer-progress {
+  stroke: #e63946 !important;
+  animation: timer-pulse 0.8s infinite alternate;
+}
+
+.timer-warning .timer-seconds {
+  color: #e63946 !important;
+}
+
+@keyframes timer-pulse {
+  from {
+    filter: drop-shadow(0 0 4px rgba(230, 57, 70, 0.5));
+  }
+  to {
+    filter: drop-shadow(0 0 16px rgba(230, 57, 70, 0.9));
+  }
+}
+
+

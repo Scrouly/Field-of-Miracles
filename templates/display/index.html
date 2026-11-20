@@ -39,12 +39,23 @@
 
     <!-- Баннер победы в раунде -->
     <div id="round-won-banner" class="round-won-banner"></div>
+
+    <!-- Модальный контейнер барабана на canvas -->
+    <div id="wheel-overlay" class="wheel-overlay">
+      <div class="wheel-box">
+        <canvas id="wheel-canvas"></canvas>
+        <button id="btn-spin-wheel" class="btn-spin-wheel">Вращать барабан!</button>
+      </div>
+    </div>
   </div>
 
   <!-- Скрипты экрана (строго офлайн, без сборщиков и внешних CDN) -->
   <script src="{% static 'display/stage.js' %}"></script>
   <script src="{% static 'display/board.js' %}"></script>
   <script src="{% static 'display/keyboard.js' %}"></script>
+  <script src="{% static 'display/audio.js' %}"></script>
+  <script src="{% static 'display/wheel.js' %}"></script>
+  <script src="{% static 'display/swipe.js' %}"></script>
   <script src="{% static 'display/display.js' %}"></script>
 </body>
 </html>

@@ -15,6 +15,7 @@ from apps.core.defaults import default_rules
 from apps.core.models import Event, GameLog, GameSession, Theme
 from engine.actions import Action, InvalidAction, action_from_dict
 from engine.actions import apply as engine_apply
+from engine.effects import run_effect
 from engine.state import (
     GameState,
     dict_to_state,
@@ -195,6 +196,22 @@ def apply_action(
         current_state: GameState = dict_to_state(session.state)
 
         new_state: GameState = engine_apply(current_state, action)
+
+        # Apply sector effect if SPIN_RESULT has an associated Effect in DB
+        if action.type == "SPIN_RESULT" and action.sector_index >= 0:
+            round_obj = (
+                session.event.rounds.select_related("wheel")
+                .order_by("order")
+                .first()
+            )
+            if round_obj and round_obj.wheel:
+                sectors = list(
+                    round_obj.wheel.sectors.select_related("effect").order_by("order")
+                )
+                if 0 <= action.sector_index < len(sectors):
+                    sector_obj = sectors[action.sector_index]
+                    if sector_obj.effect:
+                        new_state = run_effect(new_state, sector_obj.effect)
 
         # Record action in GameLog
         last_log = session.logs.order_by("-number").first()

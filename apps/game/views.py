@@ -6,6 +6,7 @@ import json
 from typing import Any
 
 from django.http import HttpRequest, JsonResponse
+from django.shortcuts import render
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 
@@ -135,3 +136,15 @@ def action_api(request: HttpRequest) -> JsonResponse:
             {"error": "not_found", "message": str(exc)},
             status=404,
         )
+
+
+@ensure_csrf_cookie
+@require_http_methods(["GET"])
+def display_view(request: HttpRequest):
+    """Render the main multiboard display screen."""
+    session = services.get_or_create_session()
+    context = {
+        "session_id": session.pk,
+        "event_name": session.event.name,
+    }
+    return render(request, "display/index.html", context)

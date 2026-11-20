@@ -71,6 +71,18 @@ def manual_score(player: int, delta: int) -> Action:
     return Action(type="MANUAL_SCORE", player=player, delta=delta)
 
 
+def action_from_dict(data: dict) -> Action:
+    """Parse an Action from a dictionary payload."""
+    action_type = str(data.get("type", "")).upper()
+    return Action(
+        type=action_type,
+        letter=str(data.get("letter", "")),
+        correct=bool(data.get("correct", False)),
+        player=int(data.get("player", -1)),
+        delta=int(data.get("delta", 0)),
+    )
+
+
 # ------------------------------------------------------------------ #
 #  apply()
 # ------------------------------------------------------------------ #

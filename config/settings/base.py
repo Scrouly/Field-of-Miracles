@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     # Локальные приложения
     "apps.core",
+    "apps.game",
 ]
 
 MIDDLEWARE = [

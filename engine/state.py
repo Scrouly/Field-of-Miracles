@@ -30,6 +30,8 @@ class GameState:
     scoring: str  # per_letter | per_occurrence
     word_bonus: int  # bonus for guessing the whole word
     version: int  # incremented on every state change
+    question: str = ""  # question text for display / host
+    hint: str = ""  # hint for host
 
 
 def new_game(
@@ -39,6 +41,8 @@ def new_game(
     scoring: str = "per_occurrence",
     word_bonus: int = 0,
     sector_value: int = 0,
+    question: str = "",
+    hint: str = "",
 ) -> GameState:
     """Create a fresh game state for a round.
 
@@ -59,4 +63,44 @@ def new_game(
         scoring=scoring,
         word_bonus=word_bonus,
         version=0,
+        question=question,
+        hint=hint,
+    )
+
+
+def state_to_dict(state: GameState) -> dict:
+    """Serialize GameState to a JSON-compatible dictionary."""
+    return {
+        "phase": state.phase,
+        "word": state.word,
+        "mask": list(state.mask),
+        "players": list(state.players),
+        "current_player": state.current_player,
+        "scores": list(state.scores),
+        "guessed_letters": sorted(state.guessed_letters),
+        "sector_value": state.sector_value,
+        "scoring": state.scoring,
+        "word_bonus": state.word_bonus,
+        "version": state.version,
+        "question": state.question,
+        "hint": state.hint,
+    }
+
+
+def dict_to_state(data: dict) -> GameState:
+    """Deserialize GameState from a dictionary."""
+    return GameState(
+        phase=data.get("phase", "idle"),
+        word=data.get("word", ""),
+        mask=tuple(bool(x) for x in data.get("mask", ())),
+        players=tuple(data.get("players", ())),
+        current_player=int(data.get("current_player", 0)),
+        scores=tuple(int(x) for x in data.get("scores", ())),
+        guessed_letters=frozenset(data.get("guessed_letters", ())),
+        sector_value=int(data.get("sector_value", 0)),
+        scoring=str(data.get("scoring", "per_occurrence")),
+        word_bonus=int(data.get("word_bonus", 0)),
+        version=int(data.get("version", 0)),
+        question=str(data.get("question", "")),
+        hint=str(data.get("hint", "")),
     )

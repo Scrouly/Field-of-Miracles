@@ -66,3 +66,14 @@ class GameSessionFactory(factory.django.DjangoModelFactory):
         model = models.GameSession
 
     event = factory.SubFactory(EventFactory)
+
+
+class GameLogFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = models.GameLog
+
+    session = factory.SubFactory(GameSessionFactory)
+    number = factory.Sequence(lambda n: n + 1)
+    action = "GUESS_LETTER"
+    data = factory.LazyFunction(dict)
+

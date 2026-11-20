@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Студия управления — Вход</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    body {
+      background: #0b132b;
+      color: #ffffff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .pin-card {
+      background: #1c2541;
+      border: 2px solid rgba(244, 196, 48, 0.4);
+      border-radius: 20px;
+      padding: 36px 30px;
+      width: 100%;
+      max-width: 380px;
+      text-align: center;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+    }
+    h1 {
+      font-size: 24px;
+      color: #f4c430;
+      margin-bottom: 8px;
+    }
+    p {
+      color: #a0aec0;
+      font-size: 14px;
+      margin-bottom: 24px;
+    }
+    .error-msg {
+      color: #e63946;
+      font-size: 14px;
+      font-weight: bold;
+      margin-bottom: 16px;
+    }
+    .pin-display {
+      width: 100%;
+      height: 56px;
+      background: #0b132b;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      border-radius: 12px;
+      font-size: 28px;
+      letter-spacing: 12px;
+      color: #ffffff;
+      text-align: center;
+      margin-bottom: 24px;
+      outline: none;
+    }
+    .pin-display:focus {
+      border-color: #f4c430;
+      box-shadow: 0 0 12px rgba(244, 196, 48, 0.3);
+    }
+    .keypad {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .btn-key {
+      height: 64px;
+      background: #243356;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      color: #ffffff;
+      font-size: 24px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s, transform 0.1s;
+    }
+    .btn-key:active {
+      background: #3a506b;
+      transform: scale(0.96);
+    }
+    .btn-submit {
+      width: 100%;
+      height: 56px;
+      background: linear-gradient(135deg, #f4c430 0%, #e0a91e 100%);
+      color: #0b132b;
+      border: none;
+      border-radius: 12px;
+      font-size: 18px;
+      font-weight: 900;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(244, 196, 48, 0.4);
+      transition: opacity 0.15s, transform 0.1s;
+    }
+    .btn-submit:active {
+      transform: scale(0.98);
+      opacity: 0.9;
+    }
+  </style>
+</head>
+<body>
+  <div class="pin-card">
+    <h1>Студия управления</h1>
+    <p>Введите PIN-код для доступа к редактору</p>
+
+    {% if error %}
+      <div class="error-msg">{{ error }}</div>
+    {% endif %}
+
+    <form method="POST" id="pin-form">
+      {% csrf_token %}
+      <input type="password" name="pin" id="pin-input" class="pin-display" maxlength="8" readonly required autocomplete="off">
+
+      <div class="keypad">
+        <button type="button" class="btn-key" data-val="1">1</button>
+        <button type="button" class="btn-key" data-val="2">2</button>
+        <button type="button" class="btn-key" data-val="3">3</button>
+        <button type="button" class="btn-key" data-val="4">4</button>
+        <button type="button" class="btn-key" data-val="5">5</button>
+        <button type="button" class="btn-key" data-val="6">6</button>
+        <button type="button" class="btn-key" data-val="7">7</button>
+        <button type="button" class="btn-key" data-val="8">8</button>
+        <button type="button" class="btn-key" data-val="9">9</button>
+        <button type="button" class="btn-key" data-action="clear" style="font-size: 16px; color: #e63946;">C</button>
+        <button type="button" class="btn-key" data-val="0">0</button>
+        <button type="button" class="btn-key" data-action="backspace" style="font-size: 20px;">⌫</button>
+      </div>
+
+      <button type="submit" class="btn-submit">Войти</button>
+    </form>
+  </div>
+
+  <script>
+    (function() {
+      const pinInput = document.getElementById('pin-input');
+      const form = document.getElementById('pin-form');
+
+      document.querySelectorAll('.btn-key').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          const val = btn.dataset.val;
+          const action = btn.dataset.action;
+
+          if (val !== undefined) {
+            if (pinInput.value.length < 8) {
+              pinInput.value += val;
+            }
+          } else if (action === 'clear') {
+            pinInput.value = '';
+          } else if (action === 'backspace') {
+            pinInput.value = pinInput.value.slice(0, -1);
+          }
+        });
+      });
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key >= '0' && e.key <= '9') {
+          if (pinInput.value.length < 8) pinInput.value += e.key;
+        } else if (e.key === 'Backspace') {
+          pinInput.value = pinInput.value.slice(0, -1);
+        } else if (e.key === 'Escape') {
+          pinInput.value = '';
+        } else if (e.key === 'Enter') {
+          if (pinInput.value.length > 0) form.submit();
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

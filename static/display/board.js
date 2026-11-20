@@ -164,17 +164,21 @@
     updateRevealedCells(word, mask) {
       mask.forEach((revealed, idx) => {
         const prevRevealed = Boolean(this.currentMask[idx]);
+        const cell = this.cells[idx];
+        if (!cell) return;
+        const inner = cell.querySelector('.cell-inner');
+        if (!inner) return;
+
         if (revealed && !prevRevealed) {
-          const cell = this.cells[idx];
-          if (cell) {
-            const inner = cell.querySelector('.cell-inner');
-            if (inner && !inner.classList.contains('is-flipped')) {
-              // Небольшая задержка для каскадного эффекта открытия нескольких букв
-              setTimeout(() => {
-                inner.classList.add('is-flipped');
-              }, 50 * idx);
-            }
+          // Открытие буквы с 3D-переворотом
+          if (!inner.classList.contains('is-flipped')) {
+            setTimeout(() => {
+              inner.classList.add('is-flipped');
+            }, 50 * idx);
           }
+        } else if (!revealed && prevRevealed) {
+          // Закрытие буквы при отмене (Undo) или сбросе
+          inner.classList.remove('is-flipped');
         }
       });
     }

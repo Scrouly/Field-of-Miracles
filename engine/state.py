@@ -33,6 +33,10 @@ class GameState:
     question: str = ""  # question text for display / host
     hint: str = ""  # hint for host
     sector_index: int = -1  # index of current/last landed sector on wheel
+    multiplier: int = 1  # score multiplier from special sectors (e.g. x2)
+    special_event: str = ""  # active special event (e.g. reveal_any_letter, two_boxes)
+    pending_modal: str = ""  # modal window to display on frontend
+    pending_sound: str = ""  # sound trigger to play
 
 
 def new_game(
@@ -45,6 +49,10 @@ def new_game(
     question: str = "",
     hint: str = "",
     sector_index: int = -1,
+    multiplier: int = 1,
+    special_event: str = "",
+    pending_modal: str = "",
+    pending_sound: str = "",
 ) -> GameState:
     """Create a fresh game state for a round.
 
@@ -68,6 +76,10 @@ def new_game(
         question=question,
         hint=hint,
         sector_index=sector_index,
+        multiplier=multiplier,
+        special_event=special_event,
+        pending_modal=pending_modal,
+        pending_sound=pending_sound,
     )
 
 
@@ -88,6 +100,10 @@ def state_to_dict(state: GameState) -> dict:
         "question": state.question,
         "hint": state.hint,
         "sector_index": state.sector_index,
+        "multiplier": state.multiplier,
+        "special_event": state.special_event,
+        "pending_modal": state.pending_modal,
+        "pending_sound": state.pending_sound,
     }
 
 
@@ -108,4 +124,8 @@ def dict_to_state(data: dict) -> GameState:
         question=str(data.get("question", "")),
         hint=str(data.get("hint", "")),
         sector_index=int(data.get("sector_index", -1)),
+        multiplier=int(data.get("multiplier", 1)),
+        special_event=str(data.get("special_event", "")),
+        pending_modal=str(data.get("pending_modal", "")),
+        pending_sound=str(data.get("pending_sound", "")),
     )

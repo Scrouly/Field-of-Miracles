@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ОАО «Доломит» — Поле чудес | Стартовый портал</title>
+  <style>
+    :root {
+      --bg-main: #0b132b;
+      --bg-card: #1c2541;
+      --bg-card-hover: #232e52;
+      --color-gold: #f4c430;
+      --color-gold-hover: #ffd700;
+      --color-cyan: #3a86ff;
+      --color-emerald: #06d6a0;
+      --color-text: #ffffff;
+      --color-muted: #a0aec0;
+      --border-color: rgba(244, 196, 48, 0.25);
+      --border-hover: rgba(244, 196, 48, 0.7);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: radial-gradient(circle at 50% 20%, #1c2541 0%, #0b132b 75%);
+      color: var(--color-text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: 40px 20px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    header {
+      text-align: center;
+      margin-bottom: 44px;
+    }
+
+    .badge-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(6, 214, 160, 0.15);
+      border: 1px solid var(--color-emerald);
+      color: var(--color-emerald);
+      padding: 6px 16px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 18px;
+    }
+
+    .status-dot {
+      width: 9px;
+      height: 9px;
+      background: var(--color-emerald);
+      border-radius: 50%;
+      box-shadow: 0 0 10px var(--color-emerald);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 0.6; transform: scale(0.9); }
+      50% { opacity: 1; transform: scale(1.15); }
+      100% { opacity: 0.6; transform: scale(0.9); }
+    }
+
+    h1 {
+      font-size: 44px;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+      background: linear-gradient(135deg, #ffffff 40%, var(--color-gold) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+    }
+
+    .subtitle {
+      font-size: 18px;
+      color: var(--color-muted);
+      max-width: 680px;
+      margin: 0 auto;
+      line-height: 1.5;
+    }
+
+    /* Cards Grid */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+      gap: 24px;
+      margin-bottom: 44px;
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 2px solid var(--border-color);
+      border-radius: 20px;
+      padding: 32px 26px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      transition: all 0.28s ease;
+      text-decoration: none;
+      color: inherit;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+    }
+
+    .card:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--border-hover);
+      transform: translateY(-6px);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6), 0 0 24px rgba(244, 196, 48, 0.2);
+    }
+
+    .card-top {
+      margin-bottom: 24px;
+    }
+
+    .card-header-line {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 18px;
+    }
+
+    .card-icon {
+      font-size: 38px;
+      line-height: 1;
+    }
+
+    .card-tag {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      background: rgba(244, 196, 48, 0.15);
+      color: var(--color-gold);
+      border: 1px solid rgba(244, 196, 48, 0.3);
+    }
+
+    .card-tag.primary {
+      background: rgba(58, 134, 255, 0.2);
+      color: #70b4ff;
+      border-color: rgba(58, 134, 255, 0.4);
+    }
+
+    .card-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 10px;
+    }
+
+    .card-desc {
+      font-size: 14px;
+      color: var(--color-muted);
+      line-height: 1.55;
+    }
+
+    .card-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #ffffff;
+      padding: 13px 20px;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 700;
+      transition: all 0.2s ease;
+      margin-top: auto;
+    }
+
+    .card:hover .card-btn {
+      background: var(--color-gold);
+      border-color: var(--color-gold);
+      color: #0b132b;
+      box-shadow: 0 4px 15px rgba(244, 196, 48, 0.35);
+    }
+
+    .card.highlight {
+      border-color: rgba(244, 196, 48, 0.5);
+      background: linear-gradient(180deg, #1f2b4e 0%, var(--bg-card) 100%);
+    }
+
+    .card.highlight .card-btn {
+      background: var(--color-gold);
+      color: #0b132b;
+      border-color: var(--color-gold);
+    }
+
+    .card.highlight:hover .card-btn {
+      background: var(--color-gold-hover);
+    }
+
+    /* Info Bar */
+    .info-box {
+      background: rgba(11, 19, 43, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 16px;
+      padding: 22px 28px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 20px;
+      font-size: 14px;
+      color: var(--color-muted);
+    }
+
+    .info-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .info-item strong {
+      color: var(--color-gold);
+      font-size: 15px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      color: rgba(255, 255, 255, 0.4);
+      font-size: 13px;
+      margin-top: 40px;
+    }
+
+    @media (max-width: 768px) {
+      h1 { font-size: 30px; }
+      .subtitle { font-size: 15px; }
+      body { padding: 24px 16px; }
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="badge-status">
+        <span class="status-dot"></span>
+        Сервер игры активен · ОАО «Доломит»
+      </div>
+      <h1>Поле чудес</h1>
+      <p class="subtitle">Интерактивный комплекс для проведения корпоративных интеллектуально-развлекательных шоу и молодёжных форумов</p>
+    </header>
+
+    <main class="grid">
+      <!-- 1. Экран Табло -->
+      <a href="/display/" class="card highlight" id="link-display">
+        <div class="card-top">
+          <div class="card-header-line">
+            <span class="card-icon">🖥️</span>
+            <span class="card-tag primary">Мультиборд</span>
+          </div>
+          <h2 class="card-title">Экран Табло</h2>
+          <p class="card-desc">
+            Главный экран для показа зрителям и игрокам. Интерактивное табло букв, физический 3D-барабан со звуком трещотки, табло очков и эффекты победы.
+          </p>
+        </div>
+        <div class="card-btn">
+          <span>Запустить Табло игры</span>
+          <span>➔</span>
+        </div>
+      </a>
+
+      <!-- 2. Пульт ведущего -->
+      <a href="/host/" class="card" id="link-host">
+        <div class="card-top">
+          <div class="card-header-line">
+            <span class="card-icon">📱</span>
+            <span class="card-tag">PIN: 1931</span>
+          </div>
+          <h2 class="card-title">Пульт ведущего</h2>
+          <p class="card-desc">
+            Удобный адаптивный пульт для планшета или ноутбука. Вращение барабана, открытие букв, мини-игры («Две шкатулки», Сектор «+»), подсказки и экстренная отмена (Undo).
+          </p>
+        </div>
+        <div class="card-btn">
+          <span>Открыть Пульт</span>
+          <span>➔</span>
+        </div>
+      </a>
+
+      <!-- 3. Студия управления -->
+      <a href="/studio/" class="card" id="link-studio">
+        <div class="card-top">
+          <div class="card-header-line">
+            <span class="card-icon">⚙️</span>
+            <span class="card-tag">PIN: 1931</span>
+          </div>
+          <h2 class="card-title">Студия управления</h2>
+          <p class="card-desc">
+            Визуальный редактор секторов барабана, конструктор сценария мероприятия (туры, вопросы, игроки), витрина призов и настройка фирменных стилей.
+          </p>
+        </div>
+        <div class="card-btn">
+          <span>Войти в Студию</span>
+          <span>➔</span>
+        </div>
+      </a>
+
+      <!-- 4. Django Admin -->
+      <a href="/admin/" class="card" id="link-admin">
+        <div class="card-top">
+          <div class="card-header-line">
+            <span class="card-icon">🛠️</span>
+            <span class="card-tag">База данных</span>
+          </div>
+          <h2 class="card-title">Панель администратора</h2>
+          <p class="card-desc">
+            Прямое управление базой данных Django: управление каталогом вопросов и слов, резервное копирование, экспорт и импорт архивов мероприятий.
+          </p>
+        </div>
+        <div class="card-btn">
+          <span>Открыть Админку</span>
+          <span>➔</span>
+        </div>
+      </a>
+    </main>
+
+    <section class="info-box">
+      <div class="info-item">
+        <strong>🔑 PIN-код доступа</strong>
+        <span>PIN для пульта ведущего и студии по умолчанию: <code>1931</code></span>
+      </div>
+      <div class="info-item">
+        <strong>📺 Режим киоска</strong>
+        <span>Запуск на мультиборде на весь экран: используйте файл <code>start.bat</code></span>
+      </div>
+      <div class="info-item">
+        <strong>📶 Подключение планшета</strong>
+        <span>Откройте в браузере планшета: <code>&lt;IP_компьютера&gt;:8000/host/</code></span>
+      </div>
+      <div class="info-item">
+        <strong>🏢 Активное мероприятие</strong>
+        <span>{{ event_name|default:"Молодёжный форум ОАО «Доломит»" }}</span>
+      </div>
+    </section>
+
+    <footer>
+      ОАО «Доломит» · Автоматизированная система управления развлекательными играми · 100% Офлайн
+    </footer>
+  </div>
+</body>
+</html>

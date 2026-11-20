@@ -15,4 +15,10 @@ urlpatterns = [
     path("api/wheels/", views.wheel_list_api, name="api_wheels"),
     path("api/wheels/<int:wheel_id>/", views.wheel_detail_api, name="api_wheel_detail"),
     path("api/wheels/<int:wheel_id>/sectors/", views.wheel_sectors_api, name="api_wheel_sectors"),
+    # Scenario routes (Task 12)
+    path("scenario/", views.scenario_view, name="scenario"),
+    path("scenario/<int:event_id>/", views.scenario_view, name="scenario_event"),
+    path("api/events/<int:event_id>/rounds/", views.event_rounds_api, name="api_event_rounds"),
+    path("api/events/<int:event_id>/rounds/reorder/", views.event_rounds_reorder_api, name="api_event_rounds_reorder"),
+    path("api/rounds/<int:round_id>/", views.round_detail_api, name="api_round_detail"),
 ]

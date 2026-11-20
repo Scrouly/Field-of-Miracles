@@ -14,7 +14,9 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 
-from apps.core.models import Effect, Sector, Wheel
+from apps.core.models import Effect, Event, Prize, Question, Round, Sector, Wheel
+from apps.studio import scenario
+from apps.studio.scenario import ScenarioError
 
 STUDIO_PIN = os.environ.get("STUDIO_PIN", os.environ.get("HOST_PIN", "1931"))
 HEX_COLOR_REGEX = re.compile(r"^#[0-9a-fA-F]{6}$")
@@ -330,5 +332,195 @@ def wheel_sectors_api(request: HttpRequest, wheel_id: int) -> JsonResponse:
             "status": "ok",
             "message": "Барабан успешно сохранён",
             "wheel": _serialize_wheel(wheel),
+        }
+    )
+
+
+# ---------------------------------------------------------------------------
+# Scenario & Round Management (Task 12)
+# ---------------------------------------------------------------------------
+
+
+def _serialize_round(r: Round) -> dict[str, Any]:
+    return {
+        "id": r.pk,
+        "order": r.order,
+        "type": r.type,
+        "type_display": r.get_type_display(),
+        "question_id": r.question_id,
+        "question_word": r.question.word if r.question else None,
+        "question_text": r.question.text if r.question else None,
+        "wheel_id": r.wheel_id,
+        "wheel_name": r.wheel.name if r.wheel else None,
+        "prize_id": r.prize_id,
+        "prize_name": r.prize.name if r.prize else None,
+        "params": r.params or {},
+    }
+
+
+@ensure_csrf_cookie
+def scenario_view(request: HttpRequest, event_id: int | None = None) -> HttpResponse:
+    """Render the Event Scenario & Round sequencing interface."""
+    if not is_studio_authenticated(request):
+        next_param = f"?next={request.path}"
+        return redirect(f"/studio/login/{next_param}")
+
+    events = Event.objects.all().order_by("-is_active", "name")
+    if not events.exists():
+        event = Event.objects.create(name="Корпоратив ОАО «Доломит»", is_active=True)
+        events = Event.objects.all()
+    else:
+        if event_id:
+            event = get_object_or_404(Event, pk=event_id)
+        else:
+            event = events.filter(is_active=True).first() or events.first()
+
+    questions = Question.objects.all().order_by("word")
+    wheels = Wheel.objects.all().order_by("name")
+    prizes = Prize.objects.filter(event=event).order_by("cost")
+
+    context = {
+        "events": events,
+        "current_event": event,
+        "questions": questions,
+        "wheels": wheels,
+        "prizes": prizes,
+    }
+    return render(request, "studio/scenario.html", context)
+
+
+@require_http_methods(["GET", "POST"])
+def event_rounds_api(request: HttpRequest, event_id: int) -> JsonResponse:
+    """List rounds for an event or create a new round."""
+    if not is_studio_authenticated(request):
+        return JsonResponse({"error": "unauthorized", "message": "Требуется PIN-код"}, status=401)
+
+    event = get_object_or_404(Event, pk=event_id)
+
+    if request.method == "GET":
+        rounds = scenario.get_event_rounds(event)
+        questions = [
+            {"id": q.pk, "word": q.word, "text": q.text, "difficulty": q.get_difficulty_display()}
+            for q in Question.objects.all().order_by("word")
+        ]
+        wheels = [
+            {"id": w.pk, "name": w.name, "sector_count": w.sectors.count()}
+            for w in Wheel.objects.all().order_by("name")
+        ]
+        prizes = [
+            {"id": p.pk, "name": p.name, "cost": p.cost}
+            for p in Prize.objects.filter(event=event).order_by("cost")
+        ]
+        return JsonResponse(
+            {
+                "status": "ok",
+                "event": {"id": event.pk, "name": event.name},
+                "rounds": [_serialize_round(r) for r in rounds],
+                "questions": questions,
+                "wheels": wheels,
+                "prizes": prizes,
+            }
+        )
+
+    # POST: create a new round
+    try:
+        data = json.loads(request.body.decode("utf-8") or "{}")
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse({"error": "invalid_json"}, status=400)
+
+    round_type = data.get("type", Round.Type.QUALIFYING)
+    if round_type not in Round.Type.values:
+        round_type = Round.Type.QUALIFYING
+
+    question_id = data.get("question_id")
+    question = Question.objects.filter(pk=question_id).first() if question_id else None
+
+    wheel_id = data.get("wheel_id")
+    wheel = Wheel.objects.filter(pk=wheel_id).first() if wheel_id else None
+
+    prize_id = data.get("prize_id")
+    prize = Prize.objects.filter(pk=prize_id, event=event).first() if prize_id else None
+
+    params = data.get("params", {})
+    if not isinstance(params, dict):
+        params = {}
+
+    new_round = scenario.create_round(
+        event=event,
+        round_type=round_type,
+        question=question,
+        wheel=wheel,
+        prize=prize,
+        params=params,
+    )
+
+    return JsonResponse({"status": "ok", "round": _serialize_round(new_round)}, status=201)
+
+
+@require_http_methods(["POST"])
+def event_rounds_reorder_api(request: HttpRequest, event_id: int) -> JsonResponse:
+    """Safely reorder rounds for an event without duplicate order errors."""
+    if not is_studio_authenticated(request):
+        return JsonResponse({"error": "unauthorized", "message": "Требуется PIN-код"}, status=401)
+
+    event = get_object_or_404(Event, pk=event_id)
+
+    try:
+        data = json.loads(request.body.decode("utf-8") or "{}")
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse({"error": "invalid_json"}, status=400)
+
+    round_ids = data.get("round_ids")
+    if not isinstance(round_ids, list):
+        return JsonResponse(
+            {"error": "invalid_payload", "message": "'round_ids' должен быть списком чисел"},
+            status=400,
+        )
+
+    try:
+        updated_rounds = scenario.reorder_rounds(event=event, round_ids=round_ids)
+        return JsonResponse(
+            {
+                "status": "ok",
+                "message": "Порядок туров успешно сохранён",
+                "rounds": [_serialize_round(r) for r in updated_rounds],
+            }
+        )
+    except ScenarioError as exc:
+        return JsonResponse({"error": "reorder_failed", "message": str(exc)}, status=400)
+
+
+@require_http_methods(["PUT", "DELETE"])
+def round_detail_api(request: HttpRequest, round_id: int) -> JsonResponse:
+    """Update or delete a specific round."""
+    if not is_studio_authenticated(request):
+        return JsonResponse({"error": "unauthorized", "message": "Требуется PIN-код"}, status=401)
+
+    round_obj = get_object_or_404(Round, pk=round_id)
+
+    if request.method == "DELETE":
+        scenario.delete_round(round_obj)
+        return JsonResponse({"status": "ok", "deleted": round_id})
+
+    # PUT: update round bindings
+    try:
+        data = json.loads(request.body.decode("utf-8") or "{}")
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse({"error": "invalid_json"}, status=400)
+
+    updated_round = scenario.update_round(
+        round_obj=round_obj,
+        round_type=data.get("type"),
+        question_id=data.get("question_id"),
+        wheel_id=data.get("wheel_id"),
+        prize_id=data.get("prize_id"),
+        params=data.get("params"),
+    )
+
+    return JsonResponse(
+        {
+            "status": "ok",
+            "message": "Параметры тура обновлены",
+            "round": _serialize_round(updated_round),
         }
     )

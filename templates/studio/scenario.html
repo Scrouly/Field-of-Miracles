@@ -1,0 +1,140 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Студия: Сценарий мероприятия — Поле чудес</title>
+  <link rel="stylesheet" href="{% static 'studio/wheel_editor.css' %}">
+  <style>
+    .scenario-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px;
+      width: 100%;
+    }
+    .scenario-header-card {
+      margin-bottom: 24px;
+    }
+    .rounds-list {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .round-card {
+      background: var(--bg-card);
+      border: 1px solid var(--color-border);
+      border-radius: 12px;
+      padding: 16px 20px;
+      display: grid;
+      grid-template-columns: 80px 140px 1fr 180px 140px 48px;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      transition: transform 0.15s, border-color 0.15s;
+    }
+    .round-card:hover {
+      border-color: rgba(244, 196, 48, 0.4);
+    }
+    .round-order-box {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .round-num {
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--color-gold);
+    }
+    .round-card.type-final {
+      border-left: 4px solid #8b5cf6;
+    }
+    .round-card.type-supergame {
+      border-left: 4px solid #ef4444;
+    }
+    .round-card.type-qualifying {
+      border-left: 4px solid #2a9d8f;
+    }
+    .field-label {
+      font-size: 11px;
+      color: var(--color-text-dim);
+      margin-bottom: 4px;
+      display: block;
+      text-transform: uppercase;
+    }
+    .round-footer-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    @media (max-width: 960px) {
+      .round-card {
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Studio Navigation Bar -->
+  <header class="studio-header">
+    <div class="studio-logo">
+      <span class="gold">ПОЛЕ ЧУДЕС</span>
+      <span class="badge">Студия</span>
+    </div>
+    <nav class="studio-nav">
+      <a href="{% url 'studio:wheels' %}" class="nav-item">Барабан</a>
+      <a href="{% url 'studio:scenario' %}" class="nav-item active">Сценарий</a>
+      <a href="/admin/" class="nav-item" target="_blank">Django Админка ↗</a>
+      <a href="/host/" class="nav-item" target="_blank">Пульт ведущего ↗</a>
+      <a href="/display/" class="nav-item" target="_blank">Табло ↗</a>
+      <a href="{% url 'studio:logout' %}" class="nav-item nav-logout">Выйти</a>
+    </nav>
+  </header>
+
+  <!-- Toast -->
+  <div id="toast" class="toast hidden"></div>
+
+  <!-- Main Container -->
+  <main class="scenario-container">
+    <div class="card scenario-header-card">
+      <div class="wheel-picker-row">
+        <label for="event-select">Мероприятие:</label>
+        <select id="event-select" class="form-select">
+          {% for ev in events %}
+            <option value="{{ ev.id }}" {% if ev.id == current_event.id %}selected{% endif %}>
+              {{ ev.name }}{% if ev.is_active %} (активно){% endif %}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="round-footer-actions" style="margin-top: 16px;">
+        <div class="wheel-stats-bar">
+          <div class="stat-item">Всего туров: <strong id="stat-rounds-count">0</strong></div>
+        </div>
+        <div class="header-tools">
+          <button id="btn-add-round" class="btn btn-success">＋ Добавить тур</button>
+          <button id="btn-save-scenario" class="btn btn-primary">
+            <span class="icon">💾</span> Сохранить сценарий
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Rounds List -->
+    <div id="rounds-list" class="rounds-list">
+      <!-- Populated via scenario.js -->
+    </div>
+  </main>
+
+  <script>
+    window.CURRENT_EVENT_ID = {{ current_event.id }};
+    window.CSRF_TOKEN = "{{ csrf_token }}";
+  </script>
+  <script src="{% static 'studio/scenario.js' %}"></script>
+</body>
+</html>

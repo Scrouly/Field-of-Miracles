@@ -341,3 +341,58 @@ html, body {
   opacity: 1;
   transform: translate(-50%, -50%) scale(1);
 }
+
+/* Модальное окно барабана */
+.wheel-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(11, 19, 43, 0.88);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 80;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+}
+
+.wheel-overlay.is-active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.wheel-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.btn-spin-wheel {
+  padding: 16px 40px;
+  background: linear-gradient(135deg, #f4c430, #e0a96d);
+  color: #0b132b;
+  font-size: 26px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+  box-shadow: 0 0 25px rgba(244, 196, 48, 0.5);
+  transition: transform 0.1s ease, box-shadow 0.2s ease;
+}
+
+.btn-spin-wheel:active {
+  transform: scale(0.95);
+}
+
+.btn-spin-wheel:disabled {
+  opacity: 0.5;
+  cursor: default;
+  box-shadow: none;
+}

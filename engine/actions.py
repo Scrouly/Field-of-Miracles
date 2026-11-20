@@ -46,6 +46,8 @@ class Action:
     correct: bool = False
     player: int = -1
     delta: int = 0
+    sector_index: int = -1
+    sector_value: int = 0
 
 
 # ---- Factory helpers ------------------------------------------------
@@ -71,6 +73,16 @@ def manual_score(player: int, delta: int) -> Action:
     return Action(type="MANUAL_SCORE", player=player, delta=delta)
 
 
+def start_spin() -> Action:
+    """Start spinning the wheel."""
+    return Action(type="START_SPIN")
+
+
+def spin_result(sector_index: int, sector_value: int = 0) -> Action:
+    """Apply the landed sector result."""
+    return Action(type="SPIN_RESULT", sector_index=sector_index, sector_value=sector_value)
+
+
 def action_from_dict(data: dict) -> Action:
     """Parse an Action from a dictionary payload."""
     action_type = str(data.get("type", "")).upper()
@@ -80,6 +92,8 @@ def action_from_dict(data: dict) -> Action:
         correct=bool(data.get("correct", False)),
         player=int(data.get("player", -1)),
         delta=int(data.get("delta", 0)),
+        sector_index=int(data.get("sector_index", -1)),
+        sector_value=int(data.get("sector_value", 0)),
     )
 
 
@@ -220,6 +234,32 @@ def _manual_score(state: GameState, action: Action) -> GameState:
     )
 
 
+def _start_spin(state: GameState, action: Action) -> GameState:
+    if state.phase not in ("idle", "await_letter", "turn_end"):
+        raise InvalidAction(f"Cannot start spin in phase {state.phase!r}")
+    return replace(
+        state,
+        phase="spinning",
+        version=state.version + 1,
+    )
+
+
+def _spin_result(state: GameState, action: Action) -> GameState:
+    if state.phase not in ("spinning", "await_letter", "idle"):
+        raise InvalidAction(f"Cannot apply spin result in phase {state.phase!r}")
+
+    new_sector_value = (
+        action.sector_value if action.sector_value > 0 else state.sector_value
+    )
+    return replace(
+        state,
+        phase="await_letter",
+        sector_index=action.sector_index,
+        sector_value=new_sector_value,
+        version=state.version + 1,
+    )
+
+
 # ---- Register handlers ---------------------------------------------
 
 _HANDLERS.update(
@@ -228,5 +268,7 @@ _HANDLERS.update(
         "GUESS_WORD": _guess_word,
         "SKIP_TURN": _skip_turn,
         "MANUAL_SCORE": _manual_score,
+        "START_SPIN": _start_spin,
+        "SPIN_RESULT": _spin_result,
     }
 )

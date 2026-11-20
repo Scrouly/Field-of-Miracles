@@ -47,6 +47,7 @@ class TestDisplayView:
         assert 'id="question-text"' in html
         assert 'id="sector-value"' in html
         assert 'id="round-won-banner"' in html
+        assert 'id="wheel-canvas"' in html
 
     def test_display_page_is_fully_offline(self, client: Client, setup_display_game):
         """Review Focus & Global requirement: no external CDNs or scripts."""
@@ -66,6 +67,7 @@ class TestDisplayView:
             "stage.js",
             "board.js",
             "keyboard.js",
+            "wheel.js",
             "display.js",
             "display.css",
         ]
@@ -246,3 +248,32 @@ class TestKeyboardRequirements:
         assert 76 >= 64
         # Check gap between keys (12px >= 8px)
         assert "gap: 12px;" in display_css
+
+
+# ===================================================================
+#  Canvas Wheel Requirements (Task 7)
+# ===================================================================
+
+
+class TestCanvasWheelRequirements:
+    def test_wheel_js_has_high_dpi_and_animate_to(self):
+        wheel_js = (settings.BASE_DIR / "static" / "display" / "wheel.js").read_text(encoding="utf-8")
+
+        # High DPI support
+        assert "devicePixelRatio" in wheel_js
+        assert "setupDPI" in wheel_js
+
+        # Required interface animateTo(targetIndex, durationMs)
+        assert "animateTo(" in wheel_js
+
+        # Text along radius
+        assert "ctx.rotate(" in wheel_js
+        assert "ctx.fillText(" in wheel_js
+
+        # 16-20 sectors by default
+        assert "DEFAULT_SECTORS" in wheel_js
+        # Count sector entries
+        import re
+        matches = re.findall(r"\{\s*label:", wheel_js)
+        assert 16 <= len(matches) <= 20, f"Expected 16-20 sectors in wheel.js, got {len(matches)}"
+

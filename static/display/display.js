@@ -28,6 +28,20 @@
       this.statusMessageElem = document.getElementById('status-message');
       this.roundWonBanner = document.getElementById('round-won-banner');
 
+      const wheelCanvasElem = document.getElementById('wheel-canvas');
+      if (wheelCanvasElem && window.WheelCanvas) {
+        this.wheelCanvas = new window.WheelCanvas(wheelCanvasElem, {
+          size: 580,
+          onFinish: (idx) => this.onWheelFinish(idx),
+        });
+      }
+      this.wheelOverlay = document.getElementById('wheel-overlay');
+      this.btnSpinWheel = document.getElementById('btn-spin-wheel');
+
+      this.btnSpinWheel?.addEventListener('click', () => {
+        this.triggerSpin();
+      });
+
       this.csrfToken = this.getCsrfToken();
 
       this.startPolling();
@@ -41,6 +55,13 @@
     }
 
     async onLetterGuess(letter) {
+      await this.sendAction({
+        type: 'GUESS_LETTER',
+        letter: letter,
+      });
+    }
+
+    async sendAction(actionPayload) {
       if (this.isSubmitting) return;
       this.isSubmitting = true;
 
@@ -53,10 +74,7 @@
           },
           body: JSON.stringify({
             expected_version: this.version,
-            action: {
-              type: 'GUESS_LETTER',
-              letter: letter,
-            },
+            action: actionPayload,
           }),
         });
 
@@ -75,10 +93,37 @@
         const data = await response.json();
         this.applyState(data);
       } catch (err) {
-        console.error('Сетевая ошибка при отправке буквы:', err);
+        console.error('Сетевая ошибка при отправке действия:', err);
       } finally {
         this.isSubmitting = false;
       }
+    }
+
+    async triggerSpin() {
+      if (!this.wheelCanvas || this.wheelCanvas.isSpinning) return;
+      if (this.btnSpinWheel) this.btnSpinWheel.disabled = true;
+
+      const numSectors = this.wheelCanvas.sectors.length;
+      const targetIndex = Math.floor(Math.random() * numSectors);
+      const chosenSector = this.wheelCanvas.sectors[targetIndex];
+      const sectorValue = chosenSector ? chosenSector.value : 100;
+
+      await this.wheelCanvas.animateTo(targetIndex);
+
+      await this.sendAction({
+        type: 'SPIN_RESULT',
+        sector_index: targetIndex,
+        sector_value: sectorValue,
+      });
+
+      setTimeout(() => {
+        if (this.wheelOverlay) this.wheelOverlay.classList.remove('is-active');
+        if (this.btnSpinWheel) this.btnSpinWheel.disabled = false;
+      }, 1000);
+    }
+
+    onWheelFinish(sectorIndex) {
+      console.log('Wheel landed on sector:', sectorIndex);
     }
 
     startPolling() {
@@ -144,6 +189,20 @@
 
       // Обновление списка игроков и счёта
       this.renderPlayers(state.players || [], state.scores || [], state.current_player);
+
+      // Вращение барабана
+      if (state.phase === 'spinning') {
+        if (this.wheelOverlay) this.wheelOverlay.classList.add('is-active');
+        if (state.sector_index >= 0 && this.wheelCanvas && !this.wheelCanvas.isSpinning) {
+          this.wheelCanvas.animateTo(state.sector_index).then(() => {
+            setTimeout(() => {
+              if (this.wheelOverlay) this.wheelOverlay.classList.remove('is-active');
+            }, 800);
+          });
+        }
+      } else if (this.wheelOverlay && (!this.wheelCanvas || !this.wheelCanvas.isSpinning)) {
+        this.wheelOverlay.classList.remove('is-active');
+      }
 
       // Проверка победы в раунде
       if (state.phase === 'round_won') {

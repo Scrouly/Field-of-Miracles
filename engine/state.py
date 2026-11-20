@@ -32,6 +32,7 @@ class GameState:
     version: int  # incremented on every state change
     question: str = ""  # question text for display / host
     hint: str = ""  # hint for host
+    sector_index: int = -1  # index of current/last landed sector on wheel
 
 
 def new_game(
@@ -43,6 +44,7 @@ def new_game(
     sector_value: int = 0,
     question: str = "",
     hint: str = "",
+    sector_index: int = -1,
 ) -> GameState:
     """Create a fresh game state for a round.
 
@@ -65,6 +67,7 @@ def new_game(
         version=0,
         question=question,
         hint=hint,
+        sector_index=sector_index,
     )
 
 
@@ -84,6 +87,7 @@ def state_to_dict(state: GameState) -> dict:
         "version": state.version,
         "question": state.question,
         "hint": state.hint,
+        "sector_index": state.sector_index,
     }
 
 
@@ -103,4 +107,5 @@ def dict_to_state(data: dict) -> GameState:
         version=int(data.get("version", 0)),
         question=str(data.get("question", "")),
         hint=str(data.get("hint", "")),
+        sector_index=int(data.get("sector_index", -1)),
     )

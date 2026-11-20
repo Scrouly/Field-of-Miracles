@@ -266,6 +266,13 @@
       </div>
       <h1>Поле чудес</h1>
       <p class="subtitle">Интерактивный комплекс для проведения корпоративных интеллектуально-развлекательных шоу и молодёжных форумов</p>
+      
+      <div style="margin-top: 20px;">
+        <button id="btn-portal-reset" style="background: rgba(244, 196, 48, 0.15); border: 1px solid var(--color-gold); color: var(--color-gold); padding: 10px 22px; border-radius: 999px; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.2s ease;">
+          🔄 Сбросить тестовую игру к началу (Тур 1)
+        </button>
+        <span id="reset-status-msg" style="display: block; margin-top: 8px; font-size: 13px; color: var(--color-emerald); font-weight: 600;"></span>
+      </div>
     </header>
 
     <main class="grid">
@@ -342,6 +349,39 @@
       </a>
     </main>
 
+    <!-- Чеклист пошаговой проверки игры -->
+    <section style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px; padding: 26px 30px; margin-bottom: 30px;">
+      <h3 style="color: var(--color-gold); font-size: 18px; margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
+        <span>📋</span> Пошаговый сценарий проверки тестовой игры
+      </h3>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; font-size: 14px; line-height: 1.5; color: var(--color-muted);">
+        <div>
+          <strong style="color: #fff; display: block; margin-bottom: 4px;">1. Запуск экранов:</strong>
+          Откройте <a href="/display/" style="color: #70b4ff; text-decoration: underline;">Табло мультиборда</a> и <a href="/host/" style="color: #70b4ff; text-decoration: underline;">Пульт ведущего</a> (PIN: 1931) в двух соседних окнах браузера или на планшете.
+        </div>
+        <div>
+          <strong style="color: #fff; display: block; margin-bottom: 4px;">2. Вращение барабана:</strong>
+          Нажмите кнопку «Вращать барабан» на табло или клавишу [R] на пульте. Барабан плавно вращается с физическим звуком трещотки.
+        </div>
+        <div>
+          <strong style="color: #fff; display: block; margin-bottom: 4px;">3. Отгадывание буквы:</strong>
+          Кликните по букве «Д» на экранной клавиатуре табло. Клетка слова «ДОЛОМИТ» перевернется с 3D-эффектом, игроку начислятся очки.
+        </div>
+        <div>
+          <strong style="color: #fff; display: block; margin-bottom: 4px;">4. Промах и переход хода:</strong>
+          Нажмите букву, которой нет в слове (например «Я») — раздастся звук ошибки, и ход автоматически перейдет следующему игроку.
+        </div>
+        <div>
+          <strong style="color: #fff; display: block; margin-bottom: 4px;">5. Экстренная отмена (Undo):</strong>
+          Нажмите кнопку «Отмена / Undo» на пульте ведущего или [Ctrl+Z], чтобы вернуть ход и состояние назад.
+        </div>
+        <div>
+          <strong style="color: #fff; display: block; margin-bottom: 4px;">6. Смена туров:</strong>
+          В выпадающем списке пульта выберите «Тур 2: КАРЬЕР», «Тур 3: МАШИНИСТ», «Финал: ФЛОТАЦИЯ» или «Суперигра: ДРОБИЛКА» и нажмите «Перейти в тур».
+        </div>
+      </div>
+    </section>
+
     <section class="info-box">
       <div class="info-item">
         <strong>🔑 PIN-код доступа</strong>
@@ -365,5 +405,24 @@
       ОАО «Доломит» · Автоматизированная система управления развлекательными играми · 100% Офлайн
     </footer>
   </div>
+
+  <script>
+    document.getElementById('btn-portal-reset')?.addEventListener('click', async () => {
+      const msg = document.getElementById('reset-status-msg');
+      if (msg) msg.textContent = 'Сброс игры...';
+      try {
+        const resp = await fetch('/api/test/reset/', {
+          method: 'POST',
+          headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+        const data = await resp.json();
+        if (msg) {
+          msg.textContent = '✓ ' + (data.message || 'Игра готова к проверке!') + ' (Слово: ' + data.word + ')';
+        }
+      } catch (err) {
+        if (msg) msg.textContent = 'Ошибка сброса: ' + err.message;
+      }
+    });
+  </script>
 </body>
 </html>

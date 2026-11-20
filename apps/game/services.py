@@ -13,7 +13,7 @@ from typing import Any
 from django.db import transaction
 
 from apps.core.defaults import default_rules
-from apps.core.models import Event, GameLog, GameSession, Theme
+from apps.core.models import Event, GameLog, GameSession, Round, Theme
 from engine.actions import Action, InvalidAction, action_from_dict
 from engine.actions import apply as engine_apply
 from engine.effects import run_effect
@@ -115,11 +115,16 @@ def get_initial_state_for_event(event: Event) -> GameState:
         question_text = "Минерал и предприятие"
         hint = "Горная порода"
 
-    players = list(
-        event.players.order_by("order").values_list("name", flat=True)
-    )
-    if not players:
-        players = ["Игрок 1", "Игрок 2", "Игрок 3"]
+    if first_round and first_round.params and first_round.params.get("players"):
+        players = list(first_round.params["players"])
+    else:
+        all_players = list(
+            event.players.order_by("order").values_list("name", flat=True)
+        )
+        if len(all_players) >= 3:
+            players = all_players[:3]
+        else:
+            players = all_players or ["Игрок 1", "Игрок 2", "Игрок 3"]
 
     rules = event.rules or {}
     scoring = rules.get("scoring", "per_occurrence")
@@ -222,6 +227,51 @@ def apply_action(
         if action_data.get("type", "").upper() == "UNDO":
             return undo_last_action(session)
 
+        if action_data.get("type", "").upper() == "LOAD_ROUND":
+            round_id = action_data.get("round_id")
+            if not round_id:
+                raise InvalidAction("Параметр 'round_id' обязателен для LOAD_ROUND")
+            new_state_dict = load_round_for_session(session, int(round_id))
+            return {
+                **new_state_dict,
+                "status": "ok",
+                "changed": True,
+                "version": session.version,
+                "session_id": session.pk,
+                "state": new_state_dict,
+            }
+
+        if action_data.get("type", "").upper() == "RESET_ROUND":
+            current_state = dict_to_state(session.state)
+            init_state = new_game(
+                word=current_state.word,
+                players=list(current_state.players),
+                scoring=current_state.scoring,
+                word_bonus=current_state.word_bonus,
+                sector_value=100,
+                question=current_state.question,
+                hint=current_state.hint,
+                is_supergame=current_state.is_supergame,
+            )
+            new_state_dict = state_to_dict(init_state)
+            session.state = new_state_dict
+            session.version = session.version + 1
+            session.save(update_fields=["state", "version"])
+            GameLog.objects.create(
+                session=session,
+                number=session.logs.count() + 1,
+                action="RESET_ROUND",
+                data={"word": current_state.word},
+            )
+            return {
+                **new_state_dict,
+                "status": "ok",
+                "changed": True,
+                "version": session.version,
+                "session_id": session.pk,
+                "state": new_state_dict,
+            }
+
         action: Action = action_from_dict(action_data)
         current_state: GameState = dict_to_state(session.state)
 
@@ -312,3 +362,104 @@ def get_session_logs(
         }
         for log in logs
     ]
+
+
+def load_round_for_session(session: GameSession, round_id: int) -> dict[str, Any]:
+    """Switch the session to a specific round from the event."""
+    try:
+        round_obj = Round.objects.select_related("question", "wheel").get(pk=round_id, event=session.event)
+    except Round.DoesNotExist as exc:
+        raise InvalidAction(f"Раунд #{round_id} не найден в данном мероприятии") from exc
+
+    question = round_obj.question
+    word = question.word if question else "ДОЛОМИТ"
+    question_text = question.text if question else "Вопрос раунда"
+    hint = question.hint if question else ""
+
+    players = round_obj.params.get("players") if round_obj.params else None
+    if not players:
+        all_players = list(session.event.players.order_by("order").values_list("name", flat=True))
+        offset = (round_obj.order - 1) * 3
+        if len(all_players) >= offset + 3:
+            players = all_players[offset : offset + 3]
+        elif len(all_players) >= 3:
+            players = all_players[:3]
+        else:
+            players = all_players or ["Игрок 1", "Игрок 2", "Игрок 3"]
+
+    rules = session.event.rules or {}
+    scoring = rules.get("scoring", "per_occurrence")
+    word_bonus = rules.get("word_bonus", 500)
+    is_super = (round_obj.type == Round.Type.SUPERGAME)
+
+    init_state = new_game(
+        word=word,
+        players=players,
+        scoring=scoring,
+        word_bonus=word_bonus,
+        sector_value=100,
+        question=question_text,
+        hint=hint,
+    )
+    if is_super:
+        init_state = replace(init_state, is_supergame=True)
+
+    state_dict = state_to_dict(init_state)
+    session.state = state_dict
+    session.version = session.version + 1
+    session.save(update_fields=["state", "version"])
+
+    GameLog.objects.create(
+        session=session,
+        number=session.logs.count() + 1,
+        action="LOAD_ROUND",
+        data={"round_id": round_id, "round_order": round_obj.order, "word": word},
+    )
+    return state_dict
+
+
+def reset_test_game(event_id: int | None = None) -> GameSession:
+    """Completely reset the test game session to Tour 1 with clean state."""
+    if event_id:
+        event = Event.objects.get(pk=event_id)
+    else:
+        event = Event.objects.filter(is_active=True).first() or Event.objects.first()
+    if not event:
+        from apps.core.management.commands.setup_demo import populate_dolomit_demo
+        event = populate_dolomit_demo()
+
+    first_round = event.rounds.select_related("question").order_by("order").first()
+    question = first_round.question if first_round else None
+    word = question.word if question else "ДОЛОМИТ"
+    question_text = question.text if question else "Главный минерал предприятия"
+    hint = question.hint if question else "Название предприятия"
+
+    players = first_round.params.get("players") if first_round and first_round.params else None
+    if not players:
+        players = ["Иван Кузнецов", "Елена Смирнова", "Сергей Морозов"]
+
+    rules = event.rules or {}
+    scoring = rules.get("scoring", "per_occurrence")
+    word_bonus = rules.get("word_bonus", 500)
+
+    init_state = new_game(
+        word=word,
+        players=players,
+        scoring=scoring,
+        word_bonus=word_bonus,
+        sector_value=100,
+        question=question_text,
+        hint=hint,
+    )
+    state_dict = state_to_dict(init_state)
+
+    session = GameSession.objects.filter(event=event).order_by("-started_at").first()
+    if not session:
+        session = GameSession.objects.create(event=event, state=state_dict, version=0)
+    else:
+        session.state = state_dict
+        session.version = 0
+        session.logs.all().delete()
+        session.save(update_fields=["state", "version"])
+
+    return session

@@ -25,9 +25,14 @@
       this.logList = document.getElementById('host-log-list');
       this.letterInput = document.getElementById('host-letter-input');
       this.sectorValueElem = document.getElementById('host-sector-value');
+      this.roundSelect = document.getElementById('host-round-select');
+      this.btnLoadRound = document.getElementById('btn-load-round');
+      this.btnResetRound = document.getElementById('btn-reset-round');
+      this.btnSpinHost = document.getElementById('btn-spin-host');
 
       this.initEvents();
       this.startPolling();
+      this.fetchRounds();
     }
 
     getCsrfToken() {
@@ -59,6 +64,25 @@
         this.submitLetterInput();
       });
 
+      // Переключение и сброс раундов
+      this.btnLoadRound?.addEventListener('click', () => {
+        if (!this.roundSelect || !this.roundSelect.value) return;
+        this.sendAction({
+          type: 'LOAD_ROUND',
+          round_id: parseInt(this.roundSelect.value, 10),
+        });
+      });
+
+      this.btnResetRound?.addEventListener('click', () => {
+        if (confirm('Сбросить текущий раунд сначала?')) {
+          this.sendAction({ type: 'RESET_ROUND' });
+        }
+      });
+
+      this.btnSpinHost?.addEventListener('click', () => {
+        this.triggerSpin();
+      });
+
       // Ввод буквы по Enter
       this.letterInput?.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
@@ -85,6 +109,13 @@
         if (e.code === 'Space') {
           e.preventDefault();
           this.sendAction({ type: 'SKIP_TURN' });
+          return;
+        }
+
+        // R / К -> Вращение барабана
+        if (e.code === 'KeyR') {
+          e.preventDefault();
+          this.triggerSpin();
           return;
         }
 
@@ -185,10 +216,58 @@
       }
     }
 
+    async fetchRounds() {
+      try {
+        const resp = await fetch('/api/rounds/');
+        if (!resp.ok) return;
+        const data = await resp.json();
+        if (!this.roundSelect || !data.rounds) return;
+
+        this.roundSelect.innerHTML = '';
+        data.rounds.forEach((r) => {
+          const opt = document.createElement('option');
+          opt.value = r.id;
+          const playersStr = r.players && r.players.length ? ` [${r.players.join(', ')}]` : '';
+          opt.textContent = `Тур ${r.order} (${r.type === 'supergame' ? 'СУПЕРИГРА' : r.type}): ${r.word} — «${r.question}»${playersStr}`;
+          if (this.state && this.state.word === r.word) {
+            opt.selected = true;
+          }
+          this.roundSelect.appendChild(opt);
+        });
+      } catch (err) {
+        console.error('Ошибка загрузки туров:', err);
+      }
+    }
+
+    async triggerSpin() {
+      const numSectors = 16;
+      const targetIndex = Math.floor(Math.random() * numSectors);
+      const defaultValues = [100, 200, 300, 0, 400, 0, 500, 0, 150, 250, 0, 350, 450, 600, 750, 1000];
+      const secVal = defaultValues[targetIndex] || 100;
+
+      await this.sendAction({ type: 'START_SPIN' });
+      setTimeout(async () => {
+        await this.sendAction({
+          type: 'SPIN_RESULT',
+          sector_index: targetIndex,
+          sector_value: secVal,
+        });
+      }, 1000);
+    }
+
     applyState(state) {
       if (!state) return;
       this.state = state;
       this.version = state.version;
+
+      if (this.roundSelect && state.word) {
+        for (let i = 0; i < this.roundSelect.options.length; i++) {
+          if (this.roundSelect.options[i].textContent.includes(state.word)) {
+            this.roundSelect.selectedIndex = i;
+            break;
+          }
+        }
+      }
 
       if (this.versionElem) {
         this.versionElem.textContent = `v${this.version}`;

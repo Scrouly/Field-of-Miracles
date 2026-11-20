@@ -26,6 +26,9 @@ if errorlevel 1 (
     exit /b 1
 )
 
+rem 3.1. Инициализация демонстрационной игры ОАО «Доломит»
+python manage.py setup_demo
+
 rem 4. Запуск скрипта киоска Chrome в фоновом процессе
 echo Запуск интерфейса мультиборда в режиме киоска...
 start "" powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\kiosk.ps1"

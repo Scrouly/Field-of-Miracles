@@ -6,13 +6,15 @@ import json
 import os
 from typing import Any
 
-from django.http import HttpRequest, JsonResponse
+from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 
+from apps.core.models import Event, GameSession, Prize, Theme
 from apps.game import services
 from apps.game.services import SessionNotFound, VersionConflict
+from apps.studio import theme_editor
 from engine.actions import InvalidAction
 
 
@@ -190,3 +192,68 @@ def logs_api(request: HttpRequest) -> JsonResponse:
 
     logs = services.get_session_logs(session_id=session_id)
     return JsonResponse({"status": "ok", "logs": logs})
+
+
+@require_http_methods(["GET"])
+def theme_css_view(request: HttpRequest) -> HttpResponse:
+    """Serve dynamic CSS custom properties based on active event's theme (Task 15)."""
+    theme_id = request.GET.get("theme_id")
+    theme = None
+    if theme_id:
+        theme = Theme.objects.filter(pk=theme_id).first()
+
+    if not theme:
+        event = Event.objects.filter(is_active=True).select_related("theme").first() or Event.objects.first()
+        if event and event.theme:
+            theme = event.theme
+        else:
+            theme = Theme.objects.first() or theme_editor.get_or_create_default_theme()
+
+    css_code = theme_editor.generate_theme_css(theme)
+    return HttpResponse(css_code, content_type="text/css")
+
+
+@require_http_methods(["GET"])
+def prize_showcase_api(request: HttpRequest) -> JsonResponse:
+    """Return prize showcase and affordability calculation for a player (Task 15)."""
+    session = services.get_or_create_session()
+    state_dict = dict(session.state)
+    scores = state_dict.get("scores", [])
+    current_player = state_dict.get("current_player", 0)
+
+    score_param = request.GET.get("score")
+    if score_param is not None:
+        try:
+            player_score = int(score_param)
+        except ValueError:
+            player_score = 0
+    else:
+        player_score = scores[current_player] if (0 <= current_player < len(scores)) else 0
+
+    showcase_data = theme_editor.get_prize_showcase(session.event, player_score)
+    return JsonResponse({"status": "ok", **showcase_data})
+
+
+@require_http_methods(["POST"])
+def prize_exchange_api(request: HttpRequest) -> JsonResponse:
+    """Exchange player score points for a selected prize (Task 15)."""
+    session = services.get_or_create_session()
+    try:
+        body = json.loads(request.body.decode("utf-8") or "{}")
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse({"error": "invalid_json"}, status=400)
+
+    prize_id = body.get("prize_id")
+    if not prize_id:
+        return JsonResponse({"error": "missing_prize_id", "message": "Параметр 'prize_id' обязателен"}, status=400)
+
+    prize = Prize.objects.filter(pk=prize_id, event=session.event).first()
+    if not prize:
+        return JsonResponse({"error": "not_found", "message": "Приз не найден в данном мероприятии"}, status=404)
+
+    player_index = body.get("player_index")
+    try:
+        result = theme_editor.exchange_prize(session, prize, player_index)
+        return JsonResponse(result, status=200)
+    except ValueError as exc:
+        return JsonResponse({"error": "exchange_failed", "message": str(exc)}, status=400)

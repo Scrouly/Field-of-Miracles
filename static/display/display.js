@@ -31,6 +31,15 @@
       if (window.AudioManager) {
         window.audioManager = new window.AudioManager();
       }
+      this.audioManager = window.audioManager;
+
+      if (window.ModalManager) {
+        this.modalManager = new window.ModalManager(this);
+      }
+
+      if (window.SupergameTimer) {
+        this.timerManager = new window.SupergameTimer(this);
+      }
 
       const wheelCanvasElem = document.getElementById('wheel-canvas');
       if (wheelCanvasElem && window.WheelCanvas) {
@@ -220,12 +229,18 @@
       }
 
       // Воспроизведение звуков по триггеру
-      if (state.pending_sound && window.audioManager) {
-        if (state.pending_sound === 'bankrupt') {
-          window.audioManager.playBankrupt();
-        } else if (state.pending_sound === 'hit') {
-          window.audioManager.playHit();
-        }
+      if (state.pending_sound && window.audioManager && typeof window.audioManager.play === 'function') {
+        window.audioManager.play(state.pending_sound);
+      }
+
+      // Обновление модальных окон событий (Сектор +, Две шкатулки, Призы)
+      if (this.modalManager) {
+        this.modalManager.update(state);
+      }
+
+      // Обновление таймера суперигры
+      if (this.timerManager) {
+        this.timerManager.update(state, state.server_time);
       }
 
       // Проверка победы в раунде

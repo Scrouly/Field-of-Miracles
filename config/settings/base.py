@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     # Локальные приложения
     "apps.core",
     "apps.game",
+    "apps.studio",
 ]
 
 MIDDLEWARE = [

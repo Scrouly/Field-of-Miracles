@@ -6,5 +6,6 @@ from . import views
 urlpatterns = [
     path("", views.index, name="index"),
     path("admin/", admin.site.urls),
+    path("studio/", include("apps.studio.urls")),
     path("", include("apps.game.urls")),
 ]

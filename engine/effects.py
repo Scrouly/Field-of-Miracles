@@ -98,6 +98,8 @@ def _effect_reveal_any_letter(state: GameState, _data: dict[str, Any]) -> GameSt
         state,
         phase="special_event",
         special_event="reveal_any_letter",
+        pending_modal="reveal_cell",
+        pending_sound="sector_plus",
         version=state.version + 1,
     )
 
@@ -151,6 +153,7 @@ _EFFECT_DISPATCH: dict[str, Callable[[GameState, dict[str, Any]], GameState]] = 
     "skip_turn": _effect_skip_turn,
     "add_points": _effect_add_points,
     "reveal_any_letter": _effect_reveal_any_letter,
+    "reveal_cell": _effect_reveal_any_letter,
     "start_box_game": _effect_start_box_game,
     "show_modal": _effect_show_modal,
     "play_sound": _effect_play_sound,

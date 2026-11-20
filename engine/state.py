@@ -37,6 +37,14 @@ class GameState:
     special_event: str = ""  # active special event (e.g. reveal_any_letter, two_boxes)
     pending_modal: str = ""  # modal window to display on frontend
     pending_sound: str = ""  # sound trigger to play
+    letter_streak: int = 0  # consecutive correct letters guessed by current player
+    box_prize_index: int = 0  # index of winning box in two-boxes minigame (0 or 1)
+    box_points: int = 500  # points awarded for choosing the winning box
+    is_supergame: bool = False  # True during supergame round
+    timer_end_timestamp: float | None = None  # Absolute server epoch timestamp when timer expires
+    timer_duration: int = 60  # Timer duration in seconds (30 or 60)
+    free_letters_limit: int = 3  # Number of free letters allowed in supergame (3 or 4)
+    chosen_free_letters: tuple[str, ...] = ()  # Letters chosen by player during supergame
 
 
 def new_game(
@@ -53,6 +61,14 @@ def new_game(
     special_event: str = "",
     pending_modal: str = "",
     pending_sound: str = "",
+    letter_streak: int = 0,
+    box_prize_index: int = 0,
+    box_points: int = 500,
+    is_supergame: bool = False,
+    timer_end_timestamp: float | None = None,
+    timer_duration: int = 60,
+    free_letters_limit: int = 3,
+    chosen_free_letters: tuple[str, ...] = (),
 ) -> GameState:
     """Create a fresh game state for a round.
 
@@ -80,6 +96,14 @@ def new_game(
         special_event=special_event,
         pending_modal=pending_modal,
         pending_sound=pending_sound,
+        letter_streak=letter_streak,
+        box_prize_index=box_prize_index,
+        box_points=box_points,
+        is_supergame=is_supergame,
+        timer_end_timestamp=timer_end_timestamp,
+        timer_duration=timer_duration,
+        free_letters_limit=free_letters_limit,
+        chosen_free_letters=chosen_free_letters,
     )
 
 
@@ -104,11 +128,20 @@ def state_to_dict(state: GameState) -> dict:
         "special_event": state.special_event,
         "pending_modal": state.pending_modal,
         "pending_sound": state.pending_sound,
+        "letter_streak": state.letter_streak,
+        "box_prize_index": state.box_prize_index,
+        "box_points": state.box_points,
+        "is_supergame": state.is_supergame,
+        "timer_end_timestamp": state.timer_end_timestamp,
+        "timer_duration": state.timer_duration,
+        "free_letters_limit": state.free_letters_limit,
+        "chosen_free_letters": list(state.chosen_free_letters),
     }
 
 
 def dict_to_state(data: dict) -> GameState:
     """Deserialize GameState from a dictionary."""
+    timer_end = data.get("timer_end_timestamp")
     return GameState(
         phase=data.get("phase", "idle"),
         word=data.get("word", ""),
@@ -128,4 +161,12 @@ def dict_to_state(data: dict) -> GameState:
         special_event=str(data.get("special_event", "")),
         pending_modal=str(data.get("pending_modal", "")),
         pending_sound=str(data.get("pending_sound", "")),
+        letter_streak=int(data.get("letter_streak", 0)),
+        box_prize_index=int(data.get("box_prize_index", 0)),
+        box_points=int(data.get("box_points", 500)),
+        is_supergame=bool(data.get("is_supergame", False)),
+        timer_end_timestamp=float(timer_end) if timer_end is not None else None,
+        timer_duration=int(data.get("timer_duration", 60)),
+        free_letters_limit=int(data.get("free_letters_limit", 3)),
+        chosen_free_letters=tuple(data.get("chosen_free_letters", ())),
     )

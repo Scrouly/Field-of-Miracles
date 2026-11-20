@@ -1,0 +1,134 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Студия: Редактор барабана — Поле чудес</title>
+  <link rel="stylesheet" href="{% static 'studio/wheel_editor.css' %}">
+</head>
+<body>
+  <!-- Top Navigation Bar -->
+  <header class="studio-header">
+    <div class="studio-logo">
+      <span class="gold">ПОЛЕ ЧУДЕС</span>
+      <span class="badge">Студия</span>
+    </div>
+    <nav class="studio-nav">
+      <a href="{% url 'studio:wheels' %}" class="nav-item active">Барабан</a>
+      <a href="/studio/scenario/" class="nav-item">Сценарий</a>
+      <a href="/admin/" class="nav-item" target="_blank">Django Админка ↗</a>
+      <a href="/host/" class="nav-item" target="_blank">Пульт ведущего ↗</a>
+      <a href="/display/" class="nav-item" target="_blank">Табло ↗</a>
+      <a href="{% url 'studio:logout' %}" class="nav-item nav-logout">Выйти</a>
+    </nav>
+  </header>
+
+  <!-- Notification Toast -->
+  <div id="toast" class="toast hidden"></div>
+
+  <!-- Main Container -->
+  <main class="studio-container">
+    <!-- Left Pane: Wheel Editor -->
+    <section class="editor-pane">
+      <div class="card wheel-control-card">
+        <div class="wheel-picker-row">
+          <label for="wheel-select">Выберите барабан:</label>
+          <select id="wheel-select" class="form-select">
+            {% for w in wheels %}
+              <option value="{{ w.id }}" {% if w.id == current_wheel.id %}selected{% endif %}>
+                {{ w.name }} ({{ w.sectors.count }} сект.)
+              </option>
+            {% endfor %}
+          </select>
+          <button id="btn-new-wheel" class="btn btn-secondary">＋ Новый барабан</button>
+        </div>
+
+        <div class="wheel-name-row">
+          <div class="input-group">
+            <label for="wheel-name-input">Название барабана:</label>
+            <input type="text" id="wheel-name-input" class="form-input" value="{{ current_wheel.name }}" maxlength="100">
+          </div>
+          <div class="action-buttons">
+            <button id="btn-save-wheel" class="btn btn-primary">
+              <span class="icon">💾</span> Сохранить барабан
+            </button>
+          </div>
+        </div>
+
+        <div class="wheel-stats-bar">
+          <div class="stat-item">Секторов: <strong id="stat-sectors-count">0</strong></div>
+          <div class="stat-item">Сумма очков: <strong id="stat-points-sum">0</strong></div>
+          <div class="stat-item">Общий вес: <strong id="stat-total-weight">0</strong></div>
+        </div>
+      </div>
+
+      <!-- Sectors Table Card -->
+      <div class="card sectors-card">
+        <div class="sectors-card-header">
+          <h2>Сектора барабана</h2>
+          <div class="header-tools">
+            <button id="btn-add-sector" class="btn btn-success">＋ Добавить сектор</button>
+            <button id="btn-alternate-colors" class="btn btn-outline" title="Чередовать цвета палитры Доломита">Чередовать цвета</button>
+            <button id="btn-default-16" class="btn btn-outline" title="Заполнить стандартными 16 секторами">16 по умолчанию</button>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table class="sectors-table" id="sectors-table">
+            <thead>
+              <tr>
+                <th style="width: 48px;">№</th>
+                <th style="width: 80px;">Порядок</th>
+                <th>Подпись</th>
+                <th style="width: 100px;">Очки</th>
+                <th style="width: 120px;">Цвет</th>
+                <th style="width: 80px;">Вес</th>
+                <th style="width: 160px;">Эффект</th>
+                <th style="width: 60px;">Удал.</th>
+              </tr>
+            </thead>
+            <tbody id="sectors-tbody">
+              <!-- Dynamically populated via wheel_editor.js -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right Pane: Live Preview -->
+    <aside class="preview-pane">
+      <div class="card preview-card sticky">
+        <h2>Живой предпросмотр</h2>
+        <p class="preview-sub">Колесо обновляется в реальном времени при любых изменениях</p>
+
+        <div class="canvas-wrapper">
+          <div class="wheel-pointer">▼</div>
+          <canvas id="wheel-preview-canvas" width="460" height="460"></canvas>
+        </div>
+
+        <div class="preview-actions">
+          <button id="btn-test-spin" class="btn btn-spin">
+            <span class="spin-icon">↻</span> Крутить барабан (тест)
+          </button>
+        </div>
+
+        <div class="preview-info" id="preview-info">
+          <div class="info-title">Результат вращения:</div>
+          <div class="info-content" id="spin-result-text">Нажмите «Крутить барабан» для проверки</div>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <!-- Pass Django context to JS safely -->
+  <script>
+    window.INITIAL_WHEEL_ID = {{ current_wheel.id|default:"null" }};
+    window.CSRF_TOKEN = "{{ csrf_token }}";
+  </script>
+  <!-- Load WheelCanvas engine -->
+  <script src="{% static 'display/wheel.js' %}"></script>
+  <!-- Load Wheel Editor app -->
+  <script src="{% static 'studio/wheel_editor.js' %}"></script>
+</body>
+</html>

@@ -157,6 +157,87 @@
         osc.stop(now + idx * 0.06 + 0.4);
       });
     }
+
+    /**
+     * Воспроизведение звука по имени триггера.
+     */
+    play(soundName) {
+      if (!soundName) return;
+      switch (soundName.toLowerCase()) {
+        case 'bankrupt':
+          this.playBankrupt();
+          break;
+        case 'hit':
+        case 'letter_open':
+        case 'win':
+          this.playHit();
+          break;
+        case 'sector_plus':
+        case 'box_game':
+          if (!this.ctx || this.ctx.state !== 'running') return;
+          [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => {
+            const now = this.ctx.currentTime;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(f, now + i * 0.08);
+            gain.gain.setValueAtTime(0.25 * this.volume, now + i * 0.08);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.08 + 0.3);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(now + i * 0.08);
+            osc.stop(now + i * 0.08 + 0.3);
+          });
+          break;
+        case 'miss':
+          if (!this.ctx || this.ctx.state !== 'running') return;
+          const now = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(130, now);
+          osc.frequency.exponentialRampToValueAtTime(90, now + 0.35);
+          gain.gain.setValueAtTime(0.2 * this.volume, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.35);
+          break;
+        case 'gong':
+          this.playGong();
+          break;
+        default:
+          break;
+      }
+    }
+
+    /**
+     * Глубокий резонансный гонг (Web Audio API синтез).
+     */
+    playGong() {
+      if (!this.ctx || this.ctx.state !== 'running') return;
+      const now = this.ctx.currentTime;
+      const gongFreqs = [98, 147, 220, 311, 440]; // Металлические гармоники
+
+      gongFreqs.forEach((freq, idx) => {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, now);
+
+        const duration = 2.8;
+        const initialVol = (0.25 / (idx + 1)) * this.volume;
+        gain.gain.setValueAtTime(initialVol, now);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + duration);
+      });
+    }
   }
 
   window.AudioManager = AudioManager;

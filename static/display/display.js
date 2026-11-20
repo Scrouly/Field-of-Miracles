@@ -28,12 +28,27 @@
       this.statusMessageElem = document.getElementById('status-message');
       this.roundWonBanner = document.getElementById('round-won-banner');
 
+      if (window.AudioManager) {
+        window.audioManager = new window.AudioManager();
+      }
+
       const wheelCanvasElem = document.getElementById('wheel-canvas');
       if (wheelCanvasElem && window.WheelCanvas) {
         this.wheelCanvas = new window.WheelCanvas(wheelCanvasElem, {
           size: 580,
+          onTick: () => {
+            if (window.audioManager) {
+              window.audioManager.playRatchetClick();
+            }
+          },
           onFinish: (idx) => this.onWheelFinish(idx),
         });
+
+        if (window.SwipeController) {
+          this.swipeController = new window.SwipeController(this.wheelCanvas, {
+            onSpinTrigger: () => this.triggerSpin(),
+          });
+        }
       }
       this.wheelOverlay = document.getElementById('wheel-overlay');
       this.btnSpinWheel = document.getElementById('btn-spin-wheel');
@@ -202,6 +217,15 @@
         }
       } else if (this.wheelOverlay && (!this.wheelCanvas || !this.wheelCanvas.isSpinning)) {
         this.wheelOverlay.classList.remove('is-active');
+      }
+
+      // Воспроизведение звуков по триггеру
+      if (state.pending_sound && window.audioManager) {
+        if (state.pending_sound === 'bankrupt') {
+          window.audioManager.playBankrupt();
+        } else if (state.pending_sound === 'hit') {
+          window.audioManager.playHit();
+        }
       }
 
       // Проверка победы в раунде

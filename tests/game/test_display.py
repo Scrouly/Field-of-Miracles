@@ -68,6 +68,8 @@ class TestDisplayView:
             "board.js",
             "keyboard.js",
             "wheel.js",
+            "audio.js",
+            "swipe.js",
             "display.js",
             "display.css",
         ]
@@ -276,4 +278,32 @@ class TestCanvasWheelRequirements:
         import re
         matches = re.findall(r"\{\s*label:", wheel_js)
         assert 16 <= len(matches) <= 20, f"Expected 16-20 sectors in wheel.js, got {len(matches)}"
+
+
+# ===================================================================
+#  Swipe & Audio Requirements (Task 9)
+# ===================================================================
+
+
+class TestSwipeAndAudioRequirements:
+    def test_audio_js_requirements(self):
+        audio_js = (settings.BASE_DIR / "static" / "display" / "audio.js").read_text(encoding="utf-8")
+
+        # AudioContext & Web Audio API
+        assert "AudioContext" in audio_js
+        # Ratchet synthesis
+        assert "playRatchetClick" in audio_js
+        # User gesture unlock
+        assert "unlock" in audio_js
+
+    def test_swipe_js_requirements(self):
+        swipe_js = (settings.BASE_DIR / "static" / "display" / "swipe.js").read_text(encoding="utf-8")
+
+        # SwipeController class
+        assert "class SwipeController" in swipe_js
+        # Minimum speed threshold for false palm touch protection
+        assert "minThreshold" in swipe_js
+        # Angular calculations
+        assert "Math.atan2" in swipe_js
+        assert "angularVelocity" in swipe_js
 

@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+
+# локальные данные и секреты: в git не попадают
+db.sqlite3
+secret.key
+staticfiles/
+*.zip

@@ -1,0 +1,50 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="csrf-token" content="{{ csrf_token }}">
+  <title>Поле чудес — Экран мультиборда</title>
+  <link rel="stylesheet" href="{% static 'display/display.css' %}">
+</head>
+<body>
+  <div id="stage">
+    <!-- Верхняя панель: Название и Вопрос -->
+    <header class="header-bar">
+      <div class="event-title">{{ event_name|default:"ОАО «Доломит» · Поле чудес" }}</div>
+      <div class="question-card">
+        <div id="question-text" class="question-text">Загрузка вопроса...</div>
+      </div>
+    </header>
+
+    <!-- Центр: Табло слов -->
+    <main class="board-area">
+      <div id="board"></div>
+    </main>
+
+    <!-- Панель игроков и очков сектора -->
+    <section class="info-bar">
+      <div id="players-container" class="players-container"></div>
+      <div class="sector-indicator">
+        <div class="sector-label">Сектор на барабане</div>
+        <div id="sector-value" class="sector-value">100 очков</div>
+      </div>
+    </section>
+
+    <!-- Нижняя часть: Экранная русская клавиатура -->
+    <footer class="keyboard-area">
+      <div id="keyboard"></div>
+    </footer>
+
+    <!-- Баннер победы в раунде -->
+    <div id="round-won-banner" class="round-won-banner"></div>
+  </div>
+
+  <!-- Скрипты экрана (строго офлайн, без сборщиков и внешних CDN) -->
+  <script src="{% static 'display/stage.js' %}"></script>
+  <script src="{% static 'display/board.js' %}"></script>
+  <script src="{% static 'display/keyboard.js' %}"></script>
+  <script src="{% static 'display/display.js' %}"></script>
+</body>
+</html>

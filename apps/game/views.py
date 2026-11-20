@@ -257,3 +257,39 @@ def prize_exchange_api(request: HttpRequest) -> JsonResponse:
         return JsonResponse(result, status=200)
     except ValueError as exc:
         return JsonResponse({"error": "exchange_failed", "message": str(exc)}, status=400)
+
+
+@ensure_csrf_cookie
+@require_http_methods(["GET"])
+def game_rounds_api(request: HttpRequest) -> JsonResponse:
+    """Return all rounds of the active session's event."""
+    session = services.get_or_create_session()
+    rounds = session.event.rounds.select_related("question").order_by("order")
+    result = []
+    for r in rounds:
+        players = r.params.get("players") if r.params else []
+        result.append({
+            "id": r.pk,
+            "order": r.order,
+            "type": r.type,
+            "word": r.question.word if r.question else "",
+            "question": r.question.text if r.question else "",
+            "hint": r.question.hint if r.question else "",
+            "players": players,
+        })
+    return JsonResponse({"rounds": result, "active_word": session.state.get("word")})
+
+
+@ensure_csrf_cookie
+@require_http_methods(["POST"])
+def reset_test_game_api(request: HttpRequest) -> JsonResponse:
+    """Reset the game session to Tour 1 with clean state."""
+    session = services.reset_test_game()
+    return JsonResponse({
+        "status": "ok",
+        "message": "Тестовая игра успешно сброшена и готова к проверке",
+        "session_id": session.pk,
+        "word": session.state.get("word"),
+        "players": session.state.get("players"),
+        "version": session.version,
+    })

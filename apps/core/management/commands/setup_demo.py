@@ -4,6 +4,7 @@ from django.core.management.base import BaseCommand
 from apps.core.models import (
     Effect,
     Event,
+    GameSession,
     Player,
     Prize,
     Question,
@@ -13,6 +14,7 @@ from apps.core.models import (
     Theme,
     Wheel,
 )
+from engine.state import new_game, state_to_dict
 
 
 def populate_dolomit_demo() -> Event:
@@ -174,55 +176,67 @@ def populate_dolomit_demo() -> Event:
             defaults={"cost": cost},
         )
 
-    # 8. Rounds
-    if event.rounds.count() == 0:
-        Round.objects.create(
+    # 8. Rounds with assigned 3 players per tour
+    rounds_config = [
+        (1, Round.Type.QUALIFYING, q_r1, ["Иван Кузнецов", "Елена Смирнова", "Сергей Морозов"]),
+        (2, Round.Type.QUALIFYING, q_r2, ["Дмитрий Волков", "Ольга Васильева", "Алексей Петров"]),
+        (3, Round.Type.QUALIFYING, q_r3, ["Наталья Ковалева", "Максим Соколов", "Татьяна Новикова"]),
+        (4, Round.Type.FINAL, q_final, ["Иван Кузнецов", "Дмитрий Волков", "Максим Соколов"]),
+        (5, Round.Type.SUPERGAME, q_super, ["Иван Кузнецов"]),
+    ]
+
+    for order_val, r_type, question_obj, round_players in rounds_config:
+        r_obj, created = Round.objects.get_or_create(
             event=event,
-            order=1,
-            type=Round.Type.QUALIFYING,
-            question=q_r1,
-            wheel=wheel,
+            order=order_val,
+            defaults={
+                "type": r_type,
+                "question": question_obj,
+                "wheel": wheel,
+                "params": {"players": round_players},
+            },
         )
-        Round.objects.create(
+        if not created and (not r_obj.params or "players" not in r_obj.params):
+            r_obj.params = {"players": round_players}
+            r_obj.save(update_fields=["params"])
+
+    # 9. Clean active GameSession for Round 1
+    init_state = new_game(
+        word="ДОЛОМИТ",
+        players=["Иван Кузнецов", "Елена Смирнова", "Сергей Морозов"],
+        scoring="per_occurrence",
+        word_bonus=500,
+        sector_value=100,
+        question=q_r1.text,
+        hint=q_r1.hint,
+    )
+    state_dict = state_to_dict(init_state)
+
+    # Clear old sessions or reset active session
+    active_session = GameSession.objects.filter(event=event).order_by("-started_at").first()
+    if active_session:
+        active_session.state = state_dict
+        active_session.version = 0
+        active_session.logs.all().delete()
+        active_session.save(update_fields=["state", "version"])
+    else:
+        GameSession.objects.create(
             event=event,
-            order=2,
-            type=Round.Type.QUALIFYING,
-            question=q_r2,
-            wheel=wheel,
-        )
-        Round.objects.create(
-            event=event,
-            order=3,
-            type=Round.Type.QUALIFYING,
-            question=q_r3,
-            wheel=wheel,
-        )
-        Round.objects.create(
-            event=event,
-            order=4,
-            type=Round.Type.FINAL,
-            question=q_final,
-            wheel=wheel,
-        )
-        Round.objects.create(
-            event=event,
-            order=5,
-            type=Round.Type.SUPERGAME,
-            question=q_super,
-            wheel=wheel,
+            state=state_dict,
+            version=0,
         )
 
     return event
 
 
 class Command(BaseCommand):
-    help = "Заполнить базу данных демонстрационным мероприятием ОАО «Доломит»"
+    help = "Заполнить базу данных демонстрационным мероприятием ОАО «Доломит» и подготовить тестовую игру"
 
     def handle(self, *args, **options):
         self.stdout.write(self.style.NOTICE("Создание демонстрационного мероприятия ОАО «Доломит»..."))
         event = populate_dolomit_demo()
         self.stdout.write(
             self.style.SUCCESS(
-                f"Успешно создано мероприятие: '{event.name}' с раундами, вопросами, барабаном и призами!"
+                f"Успешно создано мероприятивное шоу: '{event.name}' с 5 турами и чистой игровой сессией!"
             )
         )

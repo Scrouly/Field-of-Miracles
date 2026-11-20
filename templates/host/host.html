@@ -1,0 +1,84 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="csrf-token" content="{{ csrf_token }}">
+  <title>Пульт ведущего — Поле чудес</title>
+  <link rel="stylesheet" href="{% static 'host/host.css' %}">
+</head>
+<body>
+  <!-- Шапка пульта -->
+  <header class="host-header">
+    <div class="host-title">ОАО «Доломит» · Пульт ведущего</div>
+    <div class="host-status">
+      <div class="live-indicator"></div>
+      <span>В эфире</span>
+      <span id="state-version" style="font-weight: bold; color: #f4c430;">v0</span>
+    </div>
+  </header>
+
+  <!-- Основная сетка -->
+  <main class="host-grid">
+    <!-- Левая колонка: Игра и Управление -->
+    <div style="display: flex; flex-direction: column; gap: 16px;">
+      <!-- Загаданное слово (секретно для зрителей, открыто ведущему) -->
+      <section class="card">
+        <div class="card-title">Слово раунда (нажмите на букву, чтобы открыть)</div>
+        <div id="host-word-display" class="secret-word-display">
+          <!-- Буквы слова генерируются через JS -->
+        </div>
+
+        <div class="question-box" id="host-question">Загрузка вопроса...</div>
+        <div class="hint-box" id="host-hint">Загрузка подсказки...</div>
+      </section>
+
+      <!-- Игроки и управление счётом -->
+      <section class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div class="card-title">Игроки и счёт</div>
+          <div style="font-size: 13px; color: #94a3b8;">
+            Сектор: <strong id="host-sector-value" style="color: #f4c430;">100 очков</strong>
+          </div>
+        </div>
+        <div id="host-players" class="players-grid"></div>
+      </section>
+
+      <!-- Панель действий ведущего -->
+      <section class="card">
+        <div class="card-title">Действия ведущего</div>
+        <div class="actions-toolbar">
+          <button id="btn-skip-turn" class="host-btn btn-skip">Пропуск хода [Space]</button>
+          <button id="btn-word-correct" class="host-btn btn-correct">Слово угадано! ✓</button>
+          <button id="btn-word-incorrect" class="host-btn btn-incorrect">Слово не угадано ✗</button>
+          <button id="btn-undo" class="host-btn btn-undo">Отмена / Undo [Ctrl+Z]</button>
+        </div>
+
+        <!-- Резервный ввод буквы при сбое тача на мультиборде -->
+        <div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border-color);">
+          <div style="font-size: 13px; color: #94a3b8; margin-bottom: 8px;">
+            Резервный ввод буквы с пульта (если тачскрин не отвечает):
+          </div>
+          <div class="letter-input-box">
+            <input type="text" id="host-letter-input" class="letter-input" maxlength="1" placeholder="Б">
+            <button id="btn-send-letter" class="host-btn" style="background: #2563eb; color: #ffffff;">Открыть букву [Enter]</button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Правая колонка: Журнал действий -->
+    <div style="display: flex; flex-direction: column;">
+      <section class="card" style="height: 100%;">
+        <div class="card-title">Журнал действий сессии</div>
+        <div id="host-log-list" class="log-list">
+          <div style="color: #94a3b8; font-size: 13px;">Загрузка журнала...</div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script src="{% static 'host/host.js' %}"></script>
+</body>
+</html>

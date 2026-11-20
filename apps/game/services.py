@@ -6,6 +6,7 @@ GameLog journaling, and pure engine transitions.
 
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Any
 
 from django.db import transaction
@@ -81,7 +82,25 @@ def get_or_create_session(
     if session is not None and session.state:
         return session
 
-    # Prepare initial state from the first round or default values
+    init_state = get_initial_state_for_event(event)
+    state_dict = state_to_dict(init_state)
+
+    if session is not None:
+        session.state = state_dict
+        session.version = init_state.version
+        session.save(update_fields=["state", "version"])
+    else:
+        session = GameSession.objects.create(
+            event=event,
+            state=state_dict,
+            version=init_state.version,
+        )
+
+    return session
+
+
+def get_initial_state_for_event(event: Event) -> GameState:
+    """Construct a clean initial GameState based on an Event and its rounds/players."""
     first_round = (
         event.rounds.select_related("question").order_by("order").first()
     )
@@ -104,7 +123,7 @@ def get_or_create_session(
     scoring = rules.get("scoring", "per_occurrence")
     word_bonus = rules.get("word_bonus", 0)
 
-    init_state = new_game(
+    return new_game(
         word=word,
         players=players,
         scoring=scoring,
@@ -113,21 +132,6 @@ def get_or_create_session(
         question=question_text,
         hint=hint,
     )
-
-    state_dict = state_to_dict(init_state)
-
-    if session is not None:
-        session.state = state_dict
-        session.version = init_state.version
-        session.save(update_fields=["state", "version"])
-    else:
-        session = GameSession.objects.create(
-            event=event,
-            state=state_dict,
-            version=init_state.version,
-        )
-
-    return session
 
 
 def get_state_data(
@@ -184,6 +188,9 @@ def apply_action(
                 current_state=session.state,
             )
 
+        if action_data.get("type", "").upper() == "UNDO":
+            return undo_last_action(session)
+
         action: Action = action_from_dict(action_data)
         current_state: GameState = dict_to_state(session.state)
 
@@ -213,3 +220,64 @@ def apply_action(
             "session_id": session.pk,
             "state": new_state_dict,
         }
+
+
+def undo_last_action(session: GameSession) -> dict[str, Any]:
+    """Roll back the last action in the session by deleting its log and replaying."""
+    logs = list(session.logs.order_by("number"))
+    if not logs:
+        state_dict = dict(session.state)
+        return {
+            **state_dict,
+            "status": "ok",
+            "changed": False,
+            "version": session.version,
+            "session_id": session.pk,
+            "state": state_dict,
+        }
+
+    # Delete the most recent log entry
+    last_log = logs.pop()
+    last_log.delete()
+
+    # Replay all remaining logs from the event's initial state
+    current_state = get_initial_state_for_event(session.event)
+    for log in logs:
+        action = action_from_dict(log.data)
+        current_state = engine_apply(current_state, action)
+
+    # Next version for client invalidation
+    new_version = session.version + 1
+    new_state = replace(current_state, version=new_version)
+    new_state_dict = state_to_dict(new_state)
+
+    session.state = new_state_dict
+    session.version = new_version
+    session.save(update_fields=["state", "version"])
+
+    return {
+        **new_state_dict,
+        "status": "ok",
+        "changed": True,
+        "version": session.version,
+        "session_id": session.pk,
+        "state": new_state_dict,
+    }
+
+
+def get_session_logs(
+    session_id: int | None = None,
+    limit: int = 30,
+) -> list[dict[str, Any]]:
+    """Return recent action logs for the host panel."""
+    session = get_or_create_session(session_id=session_id)
+    logs = session.logs.order_by("-number")[:limit]
+    return [
+        {
+            "number": log.number,
+            "action": log.action,
+            "data": log.data,
+            "created_at": log.created_at.strftime("%H:%M:%S"),
+        }
+        for log in logs
+    ]

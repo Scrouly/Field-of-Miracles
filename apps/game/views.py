@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from typing import Any
 
 from django.http import HttpRequest, JsonResponse
@@ -148,3 +149,44 @@ def display_view(request: HttpRequest):
         "event_name": session.event.name,
     }
     return render(request, "display/index.html", context)
+
+
+HOST_PIN = os.environ.get("HOST_PIN", "1931")
+
+
+@ensure_csrf_cookie
+def host_view(request: HttpRequest):
+    """Render the host control panel (/host/) with PIN protection."""
+    error = ""
+    # Check if PIN provided via GET or POST
+    pin = request.POST.get("pin") or request.GET.get("pin")
+    if pin is not None:
+        if pin == HOST_PIN:
+            request.session["host_authenticated"] = True
+        else:
+            error = "Неверный PIN-код"
+
+    if not request.session.get("host_authenticated"):
+        return render(request, "host/login.html", {"error": error})
+
+    session = services.get_or_create_session()
+    context = {
+        "session_id": session.pk,
+        "event_name": session.event.name,
+    }
+    return render(request, "host/host.html", context)
+
+
+@require_http_methods(["GET"])
+def logs_api(request: HttpRequest) -> JsonResponse:
+    """Return the recent action logs for the session."""
+    session_id_param = request.GET.get("session_id")
+    session_id = None
+    if session_id_param is not None:
+        try:
+            session_id = int(session_id_param)
+        except ValueError:
+            return JsonResponse({"error": "invalid_session_id"}, status=400)
+
+    logs = services.get_session_logs(session_id=session_id)
+    return JsonResponse({"status": "ok", "logs": logs})

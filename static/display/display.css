@@ -396,3 +396,174 @@ html, body {
   cursor: default;
   box-shadow: none;
 }
+
+/* -------------------------------------------------------------------------- */
+/* Спецмеханики: Сектор «+» и Две шкатулки (Задача 13)                         */
+/* -------------------------------------------------------------------------- */
+
+.special-event-banner {
+  position: fixed;
+  top: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, #f4c430 0%, #e0a91e 100%);
+  color: #0b132b;
+  font-size: 26px;
+  font-weight: 900;
+  padding: 16px 36px;
+  border-radius: 40px;
+  box-shadow: 0 0 35px rgba(244, 196, 48, 0.7);
+  z-index: 90;
+  letter-spacing: 1px;
+  animation: pulse-glow 1.5s infinite alternate;
+  pointer-events: none;
+  text-align: center;
+}
+
+@keyframes pulse-glow {
+  from {
+    box-shadow: 0 0 20px rgba(244, 196, 48, 0.4);
+    transform: translateX(-50%) scale(1);
+  }
+  to {
+    box-shadow: 0 0 45px rgba(244, 196, 48, 0.9);
+    transform: translateX(-50%) scale(1.03);
+  }
+}
+
+.cell-selectable {
+  cursor: pointer !important;
+  border-color: #f4c430 !important;
+  animation: cell-pulse 1s infinite alternate !important;
+}
+
+@keyframes cell-pulse {
+  from {
+    box-shadow: 0 0 10px rgba(244, 196, 48, 0.4);
+    transform: scale(1);
+  }
+  to {
+    box-shadow: 0 0 25px rgba(244, 196, 48, 0.9);
+    transform: scale(1.06);
+  }
+}
+
+.event-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(11, 19, 43, 0.9);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  transition: opacity 0.3s ease;
+}
+
+.event-modal-overlay.hidden,
+.special-event-banner.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.event-modal-card {
+  background: #1c2541;
+  border: 3px solid rgba(244, 196, 48, 0.6);
+  border-radius: 24px;
+  padding: 40px;
+  max-width: 680px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 15px 50px rgba(0, 0, 0, 0.8);
+}
+
+.modal-badge {
+  display: inline-block;
+  background: var(--color-gold, #f4c430);
+  color: #0b132b;
+  font-size: 14px;
+  font-weight: 800;
+  padding: 4px 14px;
+  border-radius: 20px;
+  margin-bottom: 12px;
+  letter-spacing: 1px;
+}
+
+.modal-title {
+  font-size: 36px;
+  font-weight: 900;
+  color: #f4c430;
+  margin-bottom: 12px;
+}
+
+.modal-desc {
+  font-size: 20px;
+  color: #e0e0e0;
+  line-height: 1.5;
+  margin-bottom: 30px;
+}
+
+.boxes-container {
+  display: flex;
+  gap: 24px;
+  justify-content: center;
+}
+
+.box-btn {
+  flex: 1;
+  background: #243356;
+  border: 2px solid rgba(244, 196, 48, 0.4);
+  border-radius: 18px;
+  padding: 24px 16px;
+  cursor: pointer;
+  transition: transform 0.15s, background 0.15s, border-color 0.15s;
+  color: #ffffff;
+}
+
+.box-btn:hover {
+  background: #2e4270;
+  border-color: #f4c430;
+  transform: translateY(-4px);
+}
+
+.box-btn:active,
+.box-btn.box-opening {
+  transform: scale(0.95);
+  background: #1f4e5b;
+}
+
+.box-icon {
+  font-size: 64px;
+  margin-bottom: 12px;
+}
+
+.box-label {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.box-result-icon {
+  font-size: 80px;
+  margin-bottom: 16px;
+}
+
+.result-win {
+  border-color: #2a9d8f !important;
+}
+
+.result-empty {
+  border-color: #e63946 !important;
+}
+
+.btn-modal-close {
+  background: linear-gradient(135deg, #f4c430 0%, #e0a91e 100%);
+  color: #0b132b;
+  border: none;
+  font-size: 20px;
+  font-weight: 800;
+  padding: 14px 36px;
+  border-radius: 12px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+

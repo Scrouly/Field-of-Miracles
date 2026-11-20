@@ -40,9 +40,11 @@ def _effect_bankrupt(state: GameState, _data: dict[str, Any]) -> GameState:
         0 if i == state.current_player else s
         for i, s in enumerate(state.scores)
     )
+    next_phase = "idle" if (state.tv_mode and not state.is_supergame) else state.phase
 
     return replace(
         state,
+        phase=next_phase,
         scores=new_scores,
         current_player=next_player,
         multiplier=1,
@@ -70,9 +72,11 @@ def _effect_skip_turn(state: GameState, _data: dict[str, Any]) -> GameState:
     """Skip turn: передаёт ход следующему игроку без потери очков."""
     num_players = len(state.players)
     next_player = (state.current_player + 1) % num_players if num_players > 0 else 0
+    next_phase = "idle" if (state.tv_mode and not state.is_supergame) else state.phase
 
     return replace(
         state,
+        phase=next_phase,
         current_player=next_player,
         version=state.version + 1,
     )

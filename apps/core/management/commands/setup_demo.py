@@ -37,13 +37,17 @@ def populate_dolomit_demo() -> Event:
         name="Молодёжный форум ОАО «Доломит»",
         defaults={
             "theme": theme,
-            "rules": {"scoring": "per_occurrence", "word_bonus": 500},
+            "rules": {"scoring": "per_occurrence", "word_bonus": 500, "tv_mode": True},
             "is_active": True,
         },
     )
+    rules = event.rules or {}
+    if not rules.get("tv_mode"):
+        rules["tv_mode"] = True
+        event.rules = rules
     if not event.is_active:
         event.is_active = True
-        event.save(update_fields=["is_active"])
+    event.save(update_fields=["rules", "is_active"])
 
     # 3. Tags
     tag_factory, _ = Tag.objects.get_or_create(name="Производство")
@@ -206,9 +210,10 @@ def populate_dolomit_demo() -> Event:
         players=["Иван Кузнецов", "Елена Смирнова", "Сергей Морозов"],
         scoring="per_occurrence",
         word_bonus=500,
-        sector_value=100,
+        sector_value=0,
         question=q_r1.text,
         hint=q_r1.hint,
+        tv_mode=True,
     )
     state_dict = state_to_dict(init_state)
 

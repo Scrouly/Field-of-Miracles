@@ -132,6 +132,10 @@
       if (!this.letterInput) return;
       const val = this.letterInput.value.trim().toLowerCase();
       if (!val) return;
+      if (this.state && this.state.phase === 'idle') {
+        alert('Внимание: В строгом ТВ-режиме сначала нужно вращать барабан [R]!');
+        return;
+      }
       this.letterInput.value = '';
       this.sendAction({ type: 'GUESS_LETTER', letter: val[0] });
     }
@@ -240,12 +244,24 @@
     }
 
     async triggerSpin() {
-      const numSectors = 16;
+      const sectors = (this.state && this.state.sectors && this.state.sectors.length > 0)
+        ? this.state.sectors
+        : [
+            { value: 100 }, { value: 200 }, { value: 300 }, { value: 0 },
+            { value: 400 }, { value: 0 }, { value: 500 }, { value: 0 },
+            { value: 150 }, { value: 250 }, { value: 0 }, { value: 350 },
+            { value: 450 }, { value: 600 }, { value: 750 }, { value: 1000 }
+          ];
+      const numSectors = sectors.length;
       const targetIndex = Math.floor(Math.random() * numSectors);
-      const defaultValues = [100, 200, 300, 0, 400, 0, 500, 0, 150, 250, 0, 350, 450, 600, 750, 1000];
-      const secVal = defaultValues[targetIndex] || 100;
+      const chosenSector = sectors[targetIndex];
+      const secVal = (chosenSector && chosenSector.value !== undefined) ? chosenSector.value : 100;
 
-      await this.sendAction({ type: 'START_SPIN' });
+      await this.sendAction({
+        type: 'START_SPIN',
+        sector_index: targetIndex,
+        sector_value: secVal,
+      });
       setTimeout(async () => {
         await this.sendAction({
           type: 'SPIN_RESULT',
@@ -259,6 +275,45 @@
       if (!state) return;
       this.state = state;
       this.version = state.version;
+
+      const phaseBadge = document.getElementById('host-phase-badge');
+      const currentPlayer = (state.players && state.players[state.current_player]) || 'Игрок';
+
+      if (phaseBadge) {
+        if (state.phase === 'idle') {
+          phaseBadge.textContent = `🎡 Вращайте барабан (Ход: ${currentPlayer})`;
+          phaseBadge.style.background = 'rgba(244,196,48,0.25)';
+          phaseBadge.style.color = '#f4c430';
+          phaseBadge.style.borderColor = 'rgba(244,196,48,0.7)';
+        } else if (state.phase === 'spinning') {
+          phaseBadge.textContent = '🎡 Барабан вращается...';
+          phaseBadge.style.background = 'rgba(58,134,255,0.25)';
+          phaseBadge.style.color = '#3a86ff';
+          phaseBadge.style.borderColor = '#3a86ff';
+        } else if (state.phase === 'await_letter') {
+          phaseBadge.textContent = `✏️ Отгадывание буквы (Сектор: ${state.sector_value || 0} очков)`;
+          phaseBadge.style.background = 'rgba(6,214,160,0.25)';
+          phaseBadge.style.color = '#06d6a0';
+          phaseBadge.style.borderColor = '#06d6a0';
+        } else if (state.phase === 'round_won') {
+          phaseBadge.textContent = `🏆 Победа в раунде (${currentPlayer})`;
+          phaseBadge.style.background = 'rgba(255,215,0,0.3)';
+          phaseBadge.style.color = '#ffd700';
+          phaseBadge.style.borderColor = '#ffd700';
+        } else {
+          phaseBadge.textContent = `Фаза: ${state.phase}`;
+        }
+      }
+
+      if (this.btnSpinHost) {
+        if (state.phase === 'idle') {
+          this.btnSpinHost.style.boxShadow = '0 0 18px rgba(244,196,48,0.9)';
+          this.btnSpinHost.style.transform = 'scale(1.04)';
+        } else {
+          this.btnSpinHost.style.boxShadow = 'none';
+          this.btnSpinHost.style.transform = 'scale(1)';
+        }
+      }
 
       if (this.roundSelect && state.word) {
         for (let i = 0; i < this.roundSelect.options.length; i++) {
@@ -284,7 +339,11 @@
       }
 
       if (this.sectorValueElem) {
-        this.sectorValueElem.textContent = `${state.sector_value || 0} очков`;
+        if (state.phase === 'idle') {
+          this.sectorValueElem.textContent = 'Вращайте!';
+        } else {
+          this.sectorValueElem.textContent = `${state.sector_value || 0} очков`;
+        }
       }
 
       this.renderWord(state.word, state.mask || []);
@@ -311,6 +370,10 @@
 
         if (!isRevealed && isLetter) {
           cell.addEventListener('click', () => {
+            if (this.state && this.state.phase === 'idle') {
+              alert('Внимание: В строгом ТВ-режиме сначала нужно вращать барабан [R]!');
+              return;
+            }
             this.sendAction({ type: 'GUESS_LETTER', letter: char.toLowerCase() });
           });
         }

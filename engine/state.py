@@ -45,12 +45,14 @@ class GameState:
     timer_duration: int = 60  # Timer duration in seconds (30 or 60)
     free_letters_limit: int = 3  # Number of free letters allowed in supergame (3 or 4)
     chosen_free_letters: tuple[str, ...] = ()  # Letters chosen by player during supergame
+    tv_mode: bool = False  # Strict TV Mode: each turn requires spinning wheel before letter
 
 
 def new_game(
     word: str,
     players: tuple[str, ...] | list[str],
     *,
+    phase: str = "",
     scoring: str = "per_occurrence",
     word_bonus: int = 0,
     sector_value: int = 0,
@@ -69,23 +71,34 @@ def new_game(
     timer_duration: int = 60,
     free_letters_limit: int = 3,
     chosen_free_letters: tuple[str, ...] = (),
+    tv_mode: bool = False,
 ) -> GameState:
     """Create a fresh game state for a round.
 
-    The game starts in ``await_letter`` with all alphabetic characters
-    hidden.  Non-alphabetic characters (hyphens, spaces) are
-    pre-revealed.
+    In standard mode, the game starts in ``await_letter``.
+    In TV mode (tv_mode=True and not is_supergame), the game starts in ``idle``
+    (awaiting spin).
+    Non-alphabetic characters (hyphens, spaces) are pre-revealed.
     """
     players_tuple = tuple(players)
+    if phase:
+        initial_phase = phase
+    elif tv_mode and not is_supergame:
+        initial_phase = "idle"
+    else:
+        initial_phase = "await_letter"
+
+    init_sector_val = 0 if (tv_mode and not is_supergame and sector_value == 0) else sector_value
+
     return GameState(
-        phase="await_letter",
+        phase=initial_phase,
         word=word,
         mask=make_mask(word),
         players=players_tuple,
         current_player=0,
         scores=tuple(0 for _ in players_tuple),
         guessed_letters=frozenset(),
-        sector_value=sector_value,
+        sector_value=init_sector_val,
         scoring=scoring,
         word_bonus=word_bonus,
         version=0,
@@ -104,6 +117,7 @@ def new_game(
         timer_duration=timer_duration,
         free_letters_limit=free_letters_limit,
         chosen_free_letters=chosen_free_letters,
+        tv_mode=tv_mode,
     )
 
 
@@ -136,6 +150,7 @@ def state_to_dict(state: GameState) -> dict:
         "timer_duration": state.timer_duration,
         "free_letters_limit": state.free_letters_limit,
         "chosen_free_letters": list(state.chosen_free_letters),
+        "tv_mode": state.tv_mode,
     }
 
 
@@ -169,4 +184,5 @@ def dict_to_state(data: dict) -> GameState:
         timer_duration=int(data.get("timer_duration", 60)),
         free_letters_limit=int(data.get("free_letters_limit", 3)),
         chosen_free_letters=tuple(data.get("chosen_free_letters", ())),
+        tv_mode=bool(data.get("tv_mode", False)),
     )

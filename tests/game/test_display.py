@@ -48,6 +48,7 @@ class TestDisplayView:
         assert 'id="sector-value"' in html
         assert 'id="round-won-banner"' in html
         assert 'id="wheel-canvas"' in html
+        assert 'id="btn-show-wheel"' in html
 
     def test_display_page_is_fully_offline(self, client: Client, setup_display_game):
         """Review Focus & Global requirement: no external CDNs or scripts."""

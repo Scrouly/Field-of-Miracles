@@ -27,9 +27,15 @@
     <!-- Панель игроков и очков сектора -->
     <section class="info-bar">
       <div id="players-container" class="players-container"></div>
-      <div class="sector-indicator">
-        <div class="sector-label">Сектор на барабане</div>
-        <div id="sector-value" class="sector-value">100 очков</div>
+      <div class="wheel-action-group">
+        <button id="btn-show-wheel" class="btn-show-wheel" title="Открыть и вращать барабан">
+          <span class="wheel-icon">🎡</span>
+          <span class="wheel-btn-text">Барабан</span>
+        </button>
+        <div class="sector-indicator" id="sector-indicator-card" title="Нажмите, чтобы открыть барабан">
+          <div class="sector-label">Сектор на барабане</div>
+          <div id="sector-value" class="sector-value">100 очков</div>
+        </div>
       </div>
     </section>
 
@@ -44,8 +50,15 @@
     <!-- Модальный контейнер барабана на canvas -->
     <div id="wheel-overlay" class="wheel-overlay">
       <div class="wheel-box">
+        <div class="wheel-header">
+          <div class="wheel-title">БАРАБАН «ПОЛЕ ЧУДЕС»</div>
+          <button id="btn-close-wheel" class="btn-close-wheel" title="Закрыть барабан">✕</button>
+        </div>
         <canvas id="wheel-canvas"></canvas>
-        <button id="btn-spin-wheel" class="btn-spin-wheel">Вращать барабан!</button>
+        <div class="wheel-controls">
+          <button id="btn-spin-wheel" class="btn-spin-wheel">Крутить барабан!</button>
+          <div class="wheel-hint">💡 Вращайте кнопкой или свайпом по барабану мышкой / пальцем</div>
+        </div>
       </div>
     </div>
   </div>

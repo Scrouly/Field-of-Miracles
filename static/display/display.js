@@ -62,14 +62,52 @@
       }
       this.wheelOverlay = document.getElementById('wheel-overlay');
       this.btnSpinWheel = document.getElementById('btn-spin-wheel');
+      this.btnShowWheel = document.getElementById('btn-show-wheel');
+      this.sectorIndicatorCard = document.getElementById('sector-indicator-card');
+      this.btnCloseWheel = document.getElementById('btn-close-wheel');
+
+      this.btnShowWheel?.addEventListener('click', () => {
+        this.openWheel();
+      });
+
+      this.sectorIndicatorCard?.addEventListener('click', () => {
+        this.openWheel();
+      });
+
+      this.btnCloseWheel?.addEventListener('click', () => {
+        this.closeWheel();
+      });
 
       this.btnSpinWheel?.addEventListener('click', () => {
         this.triggerSpin();
       });
 
+      // Горячая клавиша R на табло для открытия и вращения барабана
+      window.addEventListener('keydown', (e) => {
+        if (e.code === 'KeyR' && !e.ctrlKey && !e.altKey) {
+          if (this.wheelOverlay && !this.wheelOverlay.classList.contains('is-active')) {
+            this.openWheel();
+          } else {
+            this.triggerSpin();
+          }
+        }
+      });
+
       this.csrfToken = this.getCsrfToken();
 
       this.startPolling();
+    }
+
+    openWheel() {
+      if (this.wheelOverlay) {
+        this.wheelOverlay.classList.add('is-active');
+      }
+    }
+
+    closeWheel() {
+      if (this.wheelOverlay && (!this.wheelCanvas || !this.wheelCanvas.isSpinning)) {
+        this.wheelOverlay.classList.remove('is-active');
+      }
     }
 
     getCsrfToken() {
@@ -128,13 +166,20 @@
       if (!this.wheelCanvas || this.wheelCanvas.isSpinning) return;
       if (this.btnSpinWheel) this.btnSpinWheel.disabled = true;
 
+      this.openWheel();
+
       const numSectors = this.wheelCanvas.sectors.length;
       const targetIndex = Math.floor(Math.random() * numSectors);
       const chosenSector = this.wheelCanvas.sectors[targetIndex];
       const sectorValue = chosenSector ? chosenSector.value : 100;
 
+      // Уведомляем сервер о старте вращения
+      await this.sendAction({ type: 'START_SPIN' });
+
+      // Анимируем вращение барабана
       await this.wheelCanvas.animateTo(targetIndex);
 
+      // Отправляем результат выпавшего сектора
       await this.sendAction({
         type: 'SPIN_RESULT',
         sector_index: targetIndex,
@@ -142,9 +187,9 @@
       });
 
       setTimeout(() => {
-        if (this.wheelOverlay) this.wheelOverlay.classList.remove('is-active');
+        this.closeWheel();
         if (this.btnSpinWheel) this.btnSpinWheel.disabled = false;
-      }, 1000);
+      }, 1500);
     }
 
     onWheelFinish(sectorIndex) {

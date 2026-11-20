@@ -10,4 +10,7 @@ urlpatterns = [
     path("api/state/", views.state_api, name="state"),
     path("api/action/", views.action_api, name="action"),
     path("api/logs/", views.logs_api, name="logs"),
+    path("api/theme/css/", views.theme_css_view, name="theme_css"),
+    path("api/prizes/showcase/", views.prize_showcase_api, name="prize_showcase"),
+    path("api/prizes/exchange/", views.prize_exchange_api, name="prize_exchange"),
 ]

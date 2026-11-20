@@ -14,8 +14,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 
-from apps.core.models import Effect, Event, Prize, Question, Round, Sector, Wheel
-from apps.studio import scenario
+from apps.core.models import Effect, Event, Prize, Question, Round, Sector, Sound, Theme, Wheel
+from apps.studio import scenario, theme_editor
 from apps.studio.scenario import ScenarioError
 
 STUDIO_PIN = os.environ.get("STUDIO_PIN", os.environ.get("HOST_PIN", "1931"))
@@ -522,5 +522,86 @@ def round_detail_api(request: HttpRequest, round_id: int) -> JsonResponse:
             "status": "ok",
             "message": "Параметры тура обновлены",
             "round": _serialize_round(updated_round),
+        }
+    )
+
+
+# ---------------------------------------------------------------------------
+# Theme, Sounds, and Prize Showcase (Task 15)
+# ---------------------------------------------------------------------------
+
+
+@ensure_csrf_cookie
+def theme_editor_view(request: HttpRequest, theme_id: int | None = None) -> HttpResponse:
+    """Render Theme, Sound triggers, and Prize Showcase studio editor."""
+    if not is_studio_authenticated(request):
+        next_param = f"?next={request.path}"
+        return redirect(f"/studio/login/{next_param}")
+
+    themes = Theme.objects.all().order_by("name")
+    if not themes.exists():
+        theme = theme_editor.get_or_create_default_theme()
+        themes = Theme.objects.all()
+    else:
+        theme = get_object_or_404(Theme, pk=theme_id) if theme_id else themes.first()
+
+    event = Event.objects.filter(is_active=True).first() or Event.objects.first()
+    prizes = event.prizes.all().order_by("cost") if event else Prize.objects.none()
+    sounds = Sound.objects.all().order_by("name")
+
+    context = {
+        "themes": themes,
+        "current_theme": theme,
+        "presets": theme_editor.THEME_PRESETS,
+        "prizes": prizes,
+        "sounds": sounds,
+        "current_event": event,
+    }
+    return render(request, "studio/theme_editor.html", context)
+
+
+@require_http_methods(["GET", "POST"])
+def api_theme_detail(request: HttpRequest, theme_id: int) -> JsonResponse:
+    """Retrieve or update theme colors and parameters."""
+    if not is_studio_authenticated(request):
+        return JsonResponse({"error": "unauthorized", "message": "Требуется PIN-код"}, status=401)
+
+    theme = get_object_or_404(Theme, pk=theme_id)
+
+    if request.method == "GET":
+        return JsonResponse(
+            {
+                "status": "ok",
+                "theme": {
+                    "id": theme.pk,
+                    "name": theme.name,
+                    "colors": theme.colors or theme_editor.DOLOMITE_THEME_COLORS,
+                    "fonts": theme.fonts or {},
+                },
+                "presets": theme_editor.THEME_PRESETS,
+            }
+        )
+
+    # POST: update colors
+    try:
+        data = json.loads(request.body.decode("utf-8") or "{}")
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return JsonResponse({"error": "invalid_json"}, status=400)
+
+    colors = data.get("colors")
+    if not isinstance(colors, dict):
+        return JsonResponse({"error": "invalid_payload", "message": "'colors' должен быть объектом"}, status=400)
+
+    theme_editor.update_theme_colors(theme, colors)
+
+    return JsonResponse(
+        {
+            "status": "ok",
+            "message": "Тема успешно сохранена",
+            "theme": {
+                "id": theme.pk,
+                "name": theme.name,
+                "colors": theme.colors,
+            },
         }
     )

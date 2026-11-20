@@ -1,0 +1,274 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Студия: Оформление, звуки, призы — Поле чудес</title>
+  <link rel="stylesheet" href="{% static 'studio/wheel_editor.css' %}">
+  <style>
+    .theme-grid {
+      display: grid;
+      grid-template-columns: 1fr 440px;
+      gap: 24px;
+      max-width: 1500px;
+      margin: 0 auto;
+      padding: 24px;
+      width: 100%;
+    }
+    .color-swatch-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .color-swatch-row label {
+      font-size: 14px;
+      font-weight: 500;
+    }
+    .preset-btns {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+    .mini-mockup {
+      background: var(--bg-main, #0b132b);
+      border: 2px solid var(--color-gold, #f4c430);
+      border-radius: 14px;
+      padding: 20px;
+      text-align: center;
+      transition: all 0.2s ease;
+    }
+    .mock-header {
+      color: var(--color-gold, #f4c430);
+      font-size: 18px;
+      font-weight: 800;
+      margin-bottom: 12px;
+    }
+    .mock-card {
+      background: var(--bg-card, #1c2541);
+      border-radius: 8px;
+      padding: 14px;
+      margin-bottom: 12px;
+      color: var(--color-text, #ffffff);
+    }
+    .mock-cells {
+      display: flex;
+      gap: 6px;
+      justify-content: center;
+      margin-top: 10px;
+    }
+    .mock-cell {
+      width: 32px;
+      height: 38px;
+      background: var(--bg-card-light, #243356);
+      border: 1px solid var(--color-gold, #f4c430);
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      color: #ffffff;
+    }
+    .sound-row, .prize-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      background: var(--bg-input);
+      border-radius: 6px;
+      margin-bottom: 8px;
+    }
+    @media (max-width: 1000px) {
+      .theme-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Studio Header -->
+  <header class="studio-header">
+    <div class="studio-logo">
+      <span class="gold">ПОЛЕ ЧУДЕС</span>
+      <span class="badge">Студия</span>
+    </div>
+    <nav class="studio-nav">
+      <a href="{% url 'studio:wheels' %}" class="nav-item">Барабан</a>
+      <a href="{% url 'studio:scenario' %}" class="nav-item">Сценарий</a>
+      <a href="{% url 'studio:theme' %}" class="nav-item active">Оформление и звуки</a>
+      <a href="/admin/" class="nav-item" target="_blank">Django Админка ↗</a>
+      <a href="/host/" class="nav-item" target="_blank">Пульт ведущего ↗</a>
+      <a href="/display/" class="nav-item" target="_blank">Табло ↗</a>
+      <a href="{% url 'studio:logout' %}" class="nav-item nav-logout">Выйти</a>
+    </nav>
+  </header>
+
+  <!-- Toast -->
+  <div id="toast" class="toast hidden"></div>
+
+  <!-- Main Container -->
+  <main class="theme-grid">
+    <!-- Left Column: Theme Palette & Sounds -->
+    <section>
+      <!-- Preset and Theme Selection -->
+      <div class="card wheel-control-card">
+        <h2 style="margin-bottom: 12px; font-size: 20px;">Готовые цветовые палитры</h2>
+        <div class="preset-btns">
+          <button class="btn btn-secondary btn-preset" data-preset="dolomite">Доломит (Классика)</button>
+          <button class="btn btn-secondary btn-preset" data-preset="anniversary">Юбилейная (Золото)</button>
+          <button class="btn btn-secondary btn-preset" data-preset="high_contrast">Высокий контраст (Зал)</button>
+        </div>
+
+        <div class="wheel-picker-row">
+          <label for="theme-select">Тема в базе:</label>
+          <select id="theme-select" class="form-select">
+            {% for t in themes %}
+              <option value="{{ t.id }}" {% if t.id == current_theme.id %}selected{% endif %}>{{ t.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <!-- Colors Customizer -->
+      <div class="card sectors-card" style="margin-bottom: 20px;">
+        <div class="sectors-card-header">
+          <h2>Цвета оформления</h2>
+          <button id="btn-save-theme" class="btn btn-primary">
+            <span class="icon">💾</span> Сохранить тему
+          </button>
+        </div>
+
+        <div id="colors-container">
+          <div class="color-swatch-row">
+            <label>Основной фон экрана (--bg-main):</label>
+            <div class="color-cell-wrapper">
+              <input type="color" class="input-color-picker" data-var="bg_main" value="{{ current_theme.colors.bg_main|default:'#0b132b' }}">
+              <input type="text" class="input-cell input-color-hex" data-var="bg_main" value="{{ current_theme.colors.bg_main|default:'#0b132b' }}">
+            </div>
+          </div>
+
+          <div class="color-swatch-row">
+            <label>Фон плашек и карточек (--bg-card):</label>
+            <div class="color-cell-wrapper">
+              <input type="color" class="input-color-picker" data-var="bg_card" value="{{ current_theme.colors.bg_card|default:'#1c2541' }}">
+              <input type="text" class="input-cell input-color-hex" data-var="bg_card" value="{{ current_theme.colors.bg_card|default:'#1c2541' }}">
+            </div>
+          </div>
+
+          <div class="color-swatch-row">
+            <label>Фон клеток табло и кнопок (--bg-card-light):</label>
+            <div class="color-cell-wrapper">
+              <input type="color" class="input-color-picker" data-var="bg_card_light" value="{{ current_theme.colors.bg_card_light|default:'#243356' }}">
+              <input type="text" class="input-cell input-color-hex" data-var="bg_card_light" value="{{ current_theme.colors.bg_card_light|default:'#243356' }}">
+            </div>
+          </div>
+
+          <div class="color-swatch-row">
+            <label>Золотой акцентный цвет (--color-gold):</label>
+            <div class="color-cell-wrapper">
+              <input type="color" class="input-color-picker" data-var="color_gold" value="{{ current_theme.colors.color_gold|default:'#f4c430' }}">
+              <input type="text" class="input-cell input-color-hex" data-var="color_gold" value="{{ current_theme.colors.color_gold|default:'#f4c430' }}">
+            </div>
+          </div>
+
+          <div class="color-swatch-row">
+            <label>Основной текст (--color-text):</label>
+            <div class="color-cell-wrapper">
+              <input type="color" class="input-color-picker" data-var="color_text" value="{{ current_theme.colors.color_text|default:'#ffffff' }}">
+              <input type="text" class="input-cell input-color-hex" data-var="color_text" value="{{ current_theme.colors.color_text|default:'#ffffff' }}">
+            </div>
+          </div>
+
+          <div class="color-swatch-row">
+            <label>Дополнительный цвет (--color-accent):</label>
+            <div class="color-cell-wrapper">
+              <input type="color" class="input-color-picker" data-var="color_accent" value="{{ current_theme.colors.color_accent|default:'#2a9d8f' }}">
+              <input type="text" class="input-cell input-color-hex" data-var="color_accent" value="{{ current_theme.colors.color_accent|default:'#2a9d8f' }}">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sound Triggers Binding & Testing -->
+      <div class="card sectors-card">
+        <h2 style="margin-bottom: 14px;">Привязка звуковых триггеров (Web Audio синтез)</h2>
+        <div class="sound-row">
+          <span>Сектор «Банкрот»</span>
+          <button class="btn btn-secondary btn-test-sound" data-sound="bankrupt">🔊 Прослушать</button>
+        </div>
+        <div class="sound-row">
+          <span>Победа / Открытие буквы</span>
+          <button class="btn btn-secondary btn-test-sound" data-sound="hit">🔊 Прослушать</button>
+        </div>
+        <div class="sound-row">
+          <span>Гонг окончания времени</span>
+          <button class="btn btn-secondary btn-test-sound" data-sound="gong">🔊 Прослушать</button>
+        </div>
+        <div class="sound-row">
+          <span>Специгра «Две шкатулки» / Сектор «+»</span>
+          <button class="btn btn-secondary btn-test-sound" data-sound="box_game">🔊 Прослушать</button>
+        </div>
+        <div class="sound-row">
+          <span>Неверная буква (промах)</span>
+          <button class="btn btn-secondary btn-test-sound" data-sound="miss">🔊 Прослушать</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right Column: Live Mockup & Prize Showcase -->
+    <aside>
+      <div class="card preview-card sticky">
+        <h2>Предпросмотр темы на табло</h2>
+        <p class="preview-sub">Цвета обновляются мгновенно</p>
+
+        <div id="mini-mockup" class="mini-mockup">
+          <div class="mock-header">ПОЛЕ ЧУДЕС · ОАО «ДОЛОМИТ»</div>
+          <div class="mock-card">
+            <div style="font-size: 13px; opacity: 0.8; margin-bottom: 6px;">Вопрос раунда</div>
+            <strong style="color: var(--color-gold);">Горная порода и минерал</strong>
+            <div class="mock-cells">
+              <div class="mock-cell">Д</div>
+              <div class="mock-cell">О</div>
+              <div class="mock-cell">Л</div>
+              <div class="mock-cell">О</div>
+              <div class="mock-cell">М</div>
+              <div class="mock-cell">И</div>
+              <div class="mock-cell">Т</div>
+            </div>
+          </div>
+          <div class="mock-card" style="display: flex; justify-content: space-around;">
+            <div>Игрок: <strong>Анна</strong></div>
+            <div style="color: var(--color-gold);">Очки: <strong>1 250</strong></div>
+          </div>
+        </div>
+
+        <h3 style="margin-top: 24px; margin-bottom: 12px; font-size: 16px; color: var(--color-gold);">
+          Витрина призов мероприятия
+        </h3>
+        <div id="prizes-showcase-box" style="text-align: left; max-height: 280px; overflow-y: auto;">
+          {% for p in prizes %}
+            <div class="prize-row">
+              <span>{{ p.name }}</span>
+              <strong style="color: var(--color-gold);">{{ p.cost }} очков</strong>
+            </div>
+          {% empty %}
+            <div style="color: var(--color-text-dim); text-align: center; padding: 10px;">
+              Призы не добавлены в текущее мероприятие
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <script>
+    window.CURRENT_THEME_ID = {{ current_theme.id }};
+    window.CSRF_TOKEN = "{{ csrf_token }}";
+  </script>
+  <script src="{% static 'display/audio.js' %}"></script>
+  <script src="{% static 'studio/theme_editor.js' %}"></script>
+</body>
+</html>

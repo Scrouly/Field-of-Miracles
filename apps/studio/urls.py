@@ -21,4 +21,8 @@ urlpatterns = [
     path("api/events/<int:event_id>/rounds/", views.event_rounds_api, name="api_event_rounds"),
     path("api/events/<int:event_id>/rounds/reorder/", views.event_rounds_reorder_api, name="api_event_rounds_reorder"),
     path("api/rounds/<int:round_id>/", views.round_detail_api, name="api_round_detail"),
+    # Theme & Prize routes (Task 15)
+    path("theme/", views.theme_editor_view, name="theme"),
+    path("theme/<int:theme_id>/", views.theme_editor_view, name="theme_detail"),
+    path("api/themes/<int:theme_id>/", views.api_theme_detail, name="api_theme_detail"),
 ]

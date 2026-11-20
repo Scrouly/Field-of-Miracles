@@ -165,6 +165,33 @@ def get_state_data(
     }
 
 
+def _apply_action_with_effects(
+    state: GameState,
+    action: Action,
+    session: GameSession,
+) -> GameState:
+    """Apply an action and evaluate any associated sector effects."""
+    new_state = engine_apply(state, action)
+
+    # Apply sector effect if SPIN_RESULT has an associated Effect in DB
+    if action.type == "SPIN_RESULT" and action.sector_index >= 0:
+        round_obj = (
+            session.event.rounds.select_related("wheel")
+            .order_by("order")
+            .first()
+        )
+        if round_obj and round_obj.wheel:
+            sectors = list(
+                round_obj.wheel.sectors.select_related("effect").order_by("order")
+            )
+            if 0 <= action.sector_index < len(sectors):
+                sector_obj = sectors[action.sector_index]
+                if sector_obj.effect:
+                    new_state = run_effect(new_state, sector_obj.effect)
+
+    return new_state
+
+
 def apply_action(
     action_data: dict[str, Any],
     expected_version: int,
@@ -198,23 +225,7 @@ def apply_action(
         action: Action = action_from_dict(action_data)
         current_state: GameState = dict_to_state(session.state)
 
-        new_state: GameState = engine_apply(current_state, action)
-
-        # Apply sector effect if SPIN_RESULT has an associated Effect in DB
-        if action.type == "SPIN_RESULT" and action.sector_index >= 0:
-            round_obj = (
-                session.event.rounds.select_related("wheel")
-                .order_by("order")
-                .first()
-            )
-            if round_obj and round_obj.wheel:
-                sectors = list(
-                    round_obj.wheel.sectors.select_related("effect").order_by("order")
-                )
-                if 0 <= action.sector_index < len(sectors):
-                    sector_obj = sectors[action.sector_index]
-                    if sector_obj.effect:
-                        new_state = run_effect(new_state, sector_obj.effect)
+        new_state: GameState = _apply_action_with_effects(current_state, action, session)
 
         # Record action in GameLog
         last_log = session.logs.order_by("-number").first()
@@ -264,7 +275,7 @@ def undo_last_action(session: GameSession) -> dict[str, Any]:
     current_state = get_initial_state_for_event(session.event)
     for log in logs:
         action = action_from_dict(log.data)
-        current_state = engine_apply(current_state, action)
+        current_state = _apply_action_with_effects(current_state, action, session)
 
     # Next version for client invalidation
     new_version = session.version + 1

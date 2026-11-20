@@ -45,9 +45,9 @@ def populate_dolomit_demo() -> Event:
     if not rules.get("tv_mode"):
         rules["tv_mode"] = True
         event.rules = rules
-    if not event.is_active:
-        event.is_active = True
+    event.is_active = True
     event.save(update_fields=["rules", "is_active"])
+    Event.objects.exclude(pk=event.pk).update(is_active=False)
 
     # 3. Tags
     tag_factory, _ = Tag.objects.get_or_create(name="Производство")

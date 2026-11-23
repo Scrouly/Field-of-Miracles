@@ -183,8 +183,9 @@ def _add_score(
     )
 
 
-def _require_phase(state: GameState, phase: str, action_name: str) -> None:
-    if state.phase != phase:
+def _require_phase(state: GameState, phase: str | tuple[str, ...], action_name: str) -> None:
+    allowed = (phase,) if isinstance(phase, str) else tuple(phase)
+    if state.phase not in allowed:
         raise InvalidAction(
             f"Cannot {action_name} in phase {state.phase!r}"
         )
@@ -233,7 +234,7 @@ def _guess_letter(state: GameState, action: Action) -> GameState:
             pending_sound = "box_game"
             streak_to_store = 0  # streak consumed
         else:
-            new_phase = "await_letter"
+            new_phase = "idle" if (state.tv_mode and not state.is_supergame) else "await_letter"
             special_event = ""
             pending_modal = ""
             pending_sound = "letter_open"
@@ -253,8 +254,10 @@ def _guess_letter(state: GameState, action: Action) -> GameState:
         )
 
     # Miss — pass turn and reset streak.
+    miss_phase = "idle" if (state.tv_mode and not state.is_supergame) else "await_letter"
     return replace(
         state,
+        phase=miss_phase,
         current_player=_next_player(state),
         guessed_letters=new_guessed,
         letter_streak=0,
@@ -266,7 +269,7 @@ def _guess_letter(state: GameState, action: Action) -> GameState:
 
 
 def _guess_word(state: GameState, action: Action) -> GameState:
-    _require_phase(state, "await_letter", "guess word")
+    _require_phase(state, ("await_letter", "idle"), "guess word")
 
     if action.correct:
         full_mask = tuple(True for _ in state.mask)
@@ -285,8 +288,10 @@ def _guess_word(state: GameState, action: Action) -> GameState:
         )
 
     # Incorrect — pass turn and reset streak.
+    next_ph = "idle" if (state.tv_mode and not state.is_supergame) else "await_letter"
     return replace(
         state,
+        phase=next_ph,
         current_player=_next_player(state),
         letter_streak=0,
         special_event="",
@@ -297,9 +302,11 @@ def _guess_word(state: GameState, action: Action) -> GameState:
 
 
 def _skip_turn(state: GameState, action: Action) -> GameState:
-    _require_phase(state, "await_letter", "skip turn")
+    _require_phase(state, ("await_letter", "idle"), "skip turn")
+    next_ph = "idle" if (state.tv_mode and not state.is_supergame) else "await_letter"
     return replace(
         state,
+        phase=next_ph,
         current_player=_next_player(state),
         letter_streak=0,
         special_event="",
@@ -325,9 +332,13 @@ def _manual_score(state: GameState, action: Action) -> GameState:
 def _start_spin(state: GameState, action: Action) -> GameState:
     if state.phase not in ("idle", "await_letter", "turn_end"):
         raise InvalidAction(f"Cannot start spin in phase {state.phase!r}")
+    new_sec_val = action.sector_value if action.sector_value > 0 else state.sector_value
+    new_sec_idx = action.sector_index if action.sector_index >= 0 else state.sector_index
     return replace(
         state,
         phase="spinning",
+        sector_index=new_sec_idx,
+        sector_value=new_sec_val,
         special_event="",
         pending_modal="",
         pending_sound="",
@@ -377,7 +388,12 @@ def _reveal_cell(state: GameState, action: Action) -> GameState:
     norm_letter = normalize(target_char)
     new_mask = reveal_letter(state.word, state.mask, norm_letter)
     new_guessed = state.guessed_letters | {norm_letter}
-    new_phase = "round_won" if is_fully_revealed(new_mask) else "await_letter"
+    if is_fully_revealed(new_mask):
+        new_phase = "round_won"
+    elif state.tv_mode and not state.is_supergame:
+        new_phase = "idle"
+    else:
+        new_phase = "await_letter"
 
     return replace(
         state,
@@ -397,7 +413,7 @@ def _choose_box(state: GameState, action: Action) -> GameState:
     Guarantees:
       - Can only be applied when special_event is 'two_boxes'.
       - Box index must be 0 or 1.
-      - Applied exactly once: clears special_event and transitions to await_letter.
+      - Applied exactly once: clears special_event and transitions to await_letter (or idle in TV mode).
     """
     if state.special_event != "two_boxes" and state.pending_modal != "two_boxes":
         raise InvalidAction("Cannot choose box: two-boxes game is not active")
@@ -417,9 +433,10 @@ def _choose_box(state: GameState, action: Action) -> GameState:
         modal = "box_empty"
         sound = "miss"
 
+    next_ph = "idle" if (state.tv_mode and not state.is_supergame) else "await_letter"
     return replace(
         state,
-        phase="await_letter",
+        phase=next_ph,
         scores=new_scores,
         special_event="",
         pending_modal=modal,

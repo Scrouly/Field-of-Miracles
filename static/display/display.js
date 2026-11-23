@@ -174,7 +174,11 @@
       const sectorValue = chosenSector ? chosenSector.value : 100;
 
       // Уведомляем сервер о старте вращения
-      await this.sendAction({ type: 'START_SPIN' });
+      await this.sendAction({
+        type: 'START_SPIN',
+        sector_index: targetIndex,
+        sector_value: sectorValue,
+      });
 
       // Анимируем вращение барабана
       await this.wheelCanvas.animateTo(targetIndex);
@@ -189,7 +193,7 @@
       setTimeout(() => {
         this.closeWheel();
         if (this.btnSpinWheel) this.btnSpinWheel.disabled = false;
-      }, 1500);
+      }, 1200);
     }
 
     onWheelFinish(sectorIndex) {
@@ -241,14 +245,57 @@
 
       this.version = state.version;
 
+      // Обновление секторов барабана
+      if (state.sectors && state.sectors.length > 0 && this.wheelCanvas) {
+        this.wheelCanvas.setSectors(state.sectors);
+      }
+
+      const currentPlayerName = (state.players && state.players[state.current_player]) || 'Игрок';
+
       // Обновление вопроса
       if (this.questionTextElem) {
         this.questionTextElem.textContent = state.question || 'Вопрос раунда';
       }
 
+      // Обновление статусного сообщения Строгого ТВ-режима
+      if (this.statusMessageElem) {
+        if (state.phase === 'idle') {
+          this.statusMessageElem.textContent = `Ход игрока: ${currentPlayerName} — вращайте барабан!`;
+        } else if (state.phase === 'spinning') {
+          this.statusMessageElem.textContent = 'Барабан вращается...';
+        } else if (state.phase === 'await_letter') {
+          this.statusMessageElem.textContent = `Игрок ${currentPlayerName}, назовите букву за ${state.sector_value || 0} очков!`;
+        } else if (state.phase === 'special_event') {
+          if (state.special_event === 'two_boxes') {
+            this.statusMessageElem.textContent = `Игрок ${currentPlayerName}, выберите одну из двух шкатулок!`;
+          } else if (state.special_event === 'reveal_any_letter') {
+            this.statusMessageElem.textContent = 'Сектор «+»! Выберите любую закрытую букву на табло!';
+          } else {
+            this.statusMessageElem.textContent = 'Специальный сектор на барабане!';
+          }
+        } else if (state.phase === 'round_won') {
+          this.statusMessageElem.textContent = `Тур завершён! Победитель: ${currentPlayerName}!`;
+        } else {
+          this.statusMessageElem.textContent = `Ход игрока: ${currentPlayerName}`;
+        }
+      }
+
       // Обновление значения сектора
       if (this.sectorValueElem) {
-        this.sectorValueElem.textContent = `${state.sector_value || 0} очков`;
+        if (state.phase === 'idle') {
+          this.sectorValueElem.textContent = 'Вращайте!';
+        } else {
+          this.sectorValueElem.textContent = `${state.sector_value || 0} очков`;
+        }
+      }
+
+      // Пульсация кнопки барабана в фазе idle (Строгий ТВ-режим)
+      if (state.phase === 'idle') {
+        this.btnShowWheel?.classList.add('pulse-gold');
+        this.sectorIndicatorCard?.classList.add('pulse-gold');
+      } else {
+        this.btnShowWheel?.classList.remove('pulse-gold');
+        this.sectorIndicatorCard?.classList.remove('pulse-gold');
       }
 
       // Обновление табло (маска и буквы)
@@ -267,7 +314,7 @@
           this.wheelCanvas.animateTo(state.sector_index).then(() => {
             setTimeout(() => {
               if (this.wheelOverlay) this.wheelOverlay.classList.remove('is-active');
-            }, 800);
+            }, 1000);
           });
         }
       } else if (this.wheelOverlay && (!this.wheelCanvas || !this.wheelCanvas.isSpinning)) {

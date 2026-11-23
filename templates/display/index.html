@@ -11,11 +11,12 @@
 </head>
 <body>
   <div id="stage">
-    <!-- Верхняя панель: Название и Вопрос -->
+    <!-- Верхняя панель: Название, Вопрос и Статус тура -->
     <header class="header-bar">
       <div class="event-title">{{ event_name|default:"ОАО «Доломит» · Поле чудес" }}</div>
       <div class="question-card">
         <div id="question-text" class="question-text">Загрузка вопроса...</div>
+        <div id="status-message" class="status-message">Ход игрока: вращайте барабан!</div>
       </div>
     </header>
 

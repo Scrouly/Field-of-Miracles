@@ -129,15 +129,19 @@ def get_initial_state_for_event(event: Event) -> GameState:
     rules = event.rules or {}
     scoring = rules.get("scoring", "per_occurrence")
     word_bonus = rules.get("word_bonus", 0)
+    tv_mode = bool(rules.get("tv_mode", False))
+    is_super = (first_round.type == Round.Type.SUPERGAME) if first_round else False
 
     return new_game(
         word=word,
         players=players,
         scoring=scoring,
         word_bonus=word_bonus,
-        sector_value=100,
+        sector_value=100 if not tv_mode else 0,
         question=question_text,
         hint=hint,
+        tv_mode=tv_mode,
+        is_supergame=is_super,
     )
 
 
@@ -159,8 +163,34 @@ def get_state_data(
     state_dict = dict(session.state)
     state_dict["version"] = session.version
     server_now = time.time()
+
+    sectors_list = []
+    try:
+        round_obj = (
+            session.event.rounds.filter(question__word=session.state.get("word"))
+            .select_related("wheel")
+            .first()
+            or session.event.rounds.select_related("wheel")
+            .order_by("order")
+            .first()
+        )
+        if round_obj and round_obj.wheel:
+            sectors_list = [
+                {
+                    "id": s.id,
+                    "label": s.label,
+                    "color": s.color,
+                    "value": s.value,
+                    "order": s.order,
+                }
+                for s in round_obj.wheel.sectors.order_by("order")
+            ]
+    except Exception:
+        pass
+
     return {
         **state_dict,
+        "sectors": sectors_list,
         "status": "ok",
         "changed": True,
         "version": session.version,
@@ -251,10 +281,11 @@ def apply_action(
                 players=list(current_state.players),
                 scoring=current_state.scoring,
                 word_bonus=current_state.word_bonus,
-                sector_value=100,
+                sector_value=100 if not current_state.tv_mode else 0,
                 question=current_state.question,
                 hint=current_state.hint,
                 is_supergame=current_state.is_supergame,
+                tv_mode=current_state.tv_mode,
             )
             new_state_dict = state_to_dict(init_state)
             session.state = new_state_dict
@@ -337,10 +368,11 @@ def undo_last_action(session: GameSession) -> dict[str, Any]:
                 players=list(current_state.players),
                 scoring=current_state.scoring,
                 word_bonus=current_state.word_bonus,
-                sector_value=100,
+                sector_value=100 if not current_state.tv_mode else 0,
                 question=current_state.question,
                 hint=current_state.hint,
                 is_supergame=current_state.is_supergame,
+                tv_mode=current_state.tv_mode,
             )
         else:
             action = action_from_dict(log.data)
@@ -410,18 +442,19 @@ def _get_round_initial_state(event: Event, round_id: int) -> GameState:
     scoring = rules.get("scoring", "per_occurrence")
     word_bonus = rules.get("word_bonus", 500)
     is_super = (round_obj.type == Round.Type.SUPERGAME)
+    tv_mode = bool(rules.get("tv_mode", False))
 
     init_state = new_game(
         word=word,
         players=players,
         scoring=scoring,
         word_bonus=word_bonus,
-        sector_value=100,
+        sector_value=100 if not tv_mode else 0,
         question=question_text,
         hint=hint,
+        tv_mode=tv_mode,
+        is_supergame=is_super,
     )
-    if is_super:
-        init_state = replace(init_state, is_supergame=True)
     return init_state
 
 
@@ -441,7 +474,6 @@ def load_round_for_session(session: GameSession, round_id: int) -> dict[str, Any
         action="LOAD_ROUND",
         data={"round_id": round_id, "round_order": round_obj.order, "word": init_state.word},
     )
-    return state_dict
     return state_dict
 
 
@@ -468,15 +500,17 @@ def reset_test_game(event_id: int | None = None) -> GameSession:
     rules = event.rules or {}
     scoring = rules.get("scoring", "per_occurrence")
     word_bonus = rules.get("word_bonus", 500)
+    tv_mode = bool(rules.get("tv_mode", True))
 
     init_state = new_game(
         word=word,
         players=players,
         scoring=scoring,
         word_bonus=word_bonus,
-        sector_value=100,
+        sector_value=100 if not tv_mode else 0,
         question=question_text,
         hint=hint,
+        tv_mode=tv_mode,
     )
     state_dict = state_to_dict(init_state)
 
